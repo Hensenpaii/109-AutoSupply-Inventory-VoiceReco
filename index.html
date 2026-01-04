@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory (Stable)</title>
+    <title>Voice Inventory (Android Fix)</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -85,7 +85,6 @@
             border-left-color: var(--highlight);
             background-color: #262626; transform: translateX(5px);
         }
-        /* Lock visual prevents confusion during cooldown */
         .input-group.locked { opacity: 0.5; pointer-events: none; }
 
         .field-number {
@@ -119,7 +118,6 @@
         .log-pending { border-left: 3px solid var(--warning); }
         .log-synced { border-left: 3px solid var(--success); }
 
-        /* Helper Text */
         .cmd-list { text-align: center; color: #666; font-size: 0.8rem; margin-top: 20px; line-height: 1.6; }
         .cmd-pill { background: #333; padding: 2px 6px; border-radius: 4px; color: var(--success); }
     </style>
@@ -194,7 +192,7 @@
 
     <script>
         // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec";
 
         // --- SETUP ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -210,12 +208,12 @@
         let isListening = false;
         let activeIndex = 0;
         let isSaving = false;
-        let commandLock = false; // The anti-jump lock
+        let commandLock = false; 
         const totalFields = 5;
 
         // --- COMMANDS ---
         const CMDS = {
-            next: ['next', 'go', 'skip', 'forward', 'move'],
+            next: ['next', 'go', 'skip', 'forward'],
             back: ['back', 'return', 'previous', 'rear'],
             save: ['done', 'save', 'finish', 'submit'],
             clear: ['clear form', 'reset form', 'delete all'],
@@ -227,7 +225,7 @@
 
         if (recognition) {
             recognition.continuous = true;
-            recognition.interimResults = true; // Still true for visual feedback, handled strictly in logic
+            recognition.interimResults = true; 
             recognition.lang = 'en-US';
 
             recognition.onstart = () => {
@@ -237,40 +235,38 @@
             };
 
             recognition.onend = () => {
-                if (isListening) recognition.start(); // Auto-restart
-                else {
+                if (isListening && !isSaving && !commandLock) {
+                    recognition.start();
+                } else if (!isListening) {
                     micBtn.classList.remove('active');
                     statusText.textContent = "⏸️ Paused";
                 }
             };
 
             recognition.onresult = (event) => {
-                // If saving or locked, ignore everything
                 if (isSaving || commandLock) return;
 
                 const result = event.results[event.results.length - 1];
                 const text = result[0].transcript.toLowerCase().trim();
                 const isFinal = result.isFinal;
 
-                // 1. Show what we hear (Visual only)
+                // Visual only
                 transcriptEl.textContent = text;
                 transcriptEl.classList.remove('cmd');
 
-                // 2. STRICT RULE: Commands only execute on FINAL results
-                // This prevents the "Interim 'Next'" -> "Final 'Next'" double jump
+                // ONLY process on Final results
                 if (isFinal) {
                     if (checkCommands(text)) {
                         transcriptEl.classList.add('cmd');
-                        // Clear transcript after a command
-                        setTimeout(() => transcriptEl.textContent = "...", 800);
+                        // Reset recognition on Android to clear buffer
+                        restartRecognition();
                     } else {
-                        // Not a command, so it's data input
                         handleInput(text);
                     }
                 }
             };
         } else {
-            alert("Use Chrome browser for voice features.");
+            alert("Use Chrome browser.");
         }
 
         // --- LOGIC ---
@@ -280,30 +276,38 @@
             else { recognition.start(); }
         }
 
+        function restartRecognition() {
+            // This fixes the Android "Ghosting" issue by resetting the stream
+            if(isListening) {
+                recognition.stop();
+                // onend will restart it automatically
+            }
+        }
+
         function checkCommands(text) {
-            // Check NEXT
+            // NEXT
             if (CMDS.next.some(c => text === c || text.endsWith(" " + c))) {
                 moveField(1);
                 return true;
             }
-            // Check BACK
+            // BACK
             if (CMDS.back.some(c => text === c)) {
                 moveField(-1);
                 return true;
             }
-            // Check SAVE
+            // SAVE
             if (CMDS.save.some(c => text === c)) {
                 saveItem();
                 return true;
             }
-            // Check JUMPS
+            // JUMPS
             for (let [idx, triggers] of Object.entries(CMDS.jump)) {
                 if (triggers.some(t => text.includes(t) && (text.includes('jump') || text.includes('go')))) {
                     focusField(parseInt(idx));
                     return true;
                 }
             }
-            // Check CLEAR
+            // CLEAR
             if (CMDS.clear.some(c => text.includes(c))) {
                 clearForm();
                 return true;
@@ -312,7 +316,6 @@
         }
 
         function moveField(direction) {
-            // Apply Lock
             activateLock();
             activeIndex = (activeIndex + direction + totalFields) % totalFields;
             focusField(activeIndex);
@@ -320,7 +323,6 @@
 
         function focusField(index) {
             activeIndex = index;
-            // UI Update
             document.querySelectorAll('.input-group').forEach(el => el.classList.remove('active'));
             const group = document.getElementById(`group-${index}`);
             group.classList.add('active');
@@ -328,54 +330,54 @@
         }
 
         function activateLock() {
-            // Locks the voice engine for 1 second so it can't jump again immediately
             commandLock = true;
-            statusText.textContent = "🔒 Moving...";
+            statusText.textContent = "🔒 Processing...";
+            // 1 second lock prevents double-jumps
             setTimeout(() => {
                 commandLock = false;
                 statusText.textContent = "🎤 Listening...";
-            }, 1000); // 1 Second cooldown
+            }, 1000); 
         }
 
-        // --- INPUT HANDLING (Better Numbers) ---
+        // --- INPUT HANDLING (CRITICAL FIXES HERE) ---
         function handleInput(text) {
             const input = document.getElementById(`input-${activeIndex}`);
             let clean = text;
 
-            // Remove command words if they accidentally slipped in
-            CMDS.next.forEach(c => clean = clean.replace(c, ''));
+            // Strip commands
+            CMDS.next.forEach(c => clean = clean.replace(new RegExp(c, 'gi'), ''));
+            clean = clean.trim();
+
+            // FIX: If text is empty (because it was just a command or noise), STOP.
+            // Do NOT overwrite existing data with empty string.
+            if (clean.length === 0) return;
 
             if (input.type === 'number') {
                 input.value = parseNumber(clean);
             } else {
-                // Capitalize
                 input.value = clean.charAt(0).toUpperCase() + clean.slice(1);
             }
             
-            // Visual Flash
             input.style.color = 'var(--success)';
             setTimeout(() => input.style.color = 'white', 500);
         }
 
         function parseNumber(text) {
             let str = text.toLowerCase();
-            // 1. Homophone fixes
             const map = { 'to': '2', 'too': '2', 'for': '4', 'tree': '3', 'won': '1', 'one': '1' };
             Object.keys(map).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), map[k]));
 
-            // 2. Hyphens
             str = str.replace(/-/g, ' ');
 
-            // 3. Simple text-to-digit replacement for common inventory numbers
             const nums = {
                 'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'sixty': '60',
                 'ten': '10', 'eleven': '11', 'twelve': '12'
             };
-            // Very basic parser: if user says "twenty five", we get "20 5" -> remove space -> "25"
             Object.keys(nums).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), nums[k]));
 
-            // Remove non-digits/dots and spaces
-            return str.replace(/[^0-9.]/g, ' ').replace(/\s/g, '');
+            // If result is empty after parsing, return existing value (safeguard)
+            let result = str.replace(/[^0-9.]/g, ' ').replace(/\s/g, '');
+            return result === "" ? "" : result;
         }
 
         // --- SAVE & OFFLINE ---
@@ -403,7 +405,7 @@
                     body: JSON.stringify(data)
                 })
                 .then(() => finishSave(data, true))
-                .catch(() => saveOffline(data)); // Fallback
+                .catch(() => saveOffline(data)); 
             } else {
                 saveOffline(data);
             }
@@ -417,7 +419,6 @@
         }
 
         function finishSave(data, synced) {
-            // Add to log
             const list = document.getElementById('log-list');
             const div = document.createElement('div');
             div.className = `log-item ${synced ? 'log-synced' : 'log-pending'}`;
@@ -425,17 +426,13 @@
             list.insertBefore(div, list.firstChild);
             
             document.getElementById('log-count').textContent = list.children.length;
-            
-            // Check offline status
             updateOfflineUI();
-
-            // Reset Form
             clearForm();
+            
             isSaving = false;
             document.getElementById('save-btn').textContent = "💾 SAVE (Say 'Done')";
             transcriptEl.textContent = "✅ Saved";
             
-            // Move back to start
             focusField(0);
         }
 
@@ -454,12 +451,11 @@
             
             let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
             if (confirm(`Sync ${pending.length} items?`)) {
-                // Upload one by one loop
                 const uploadNext = (i) => {
                     if (i >= pending.length) {
                         localStorage.setItem('inv_offline', "[]");
                         updateOfflineUI();
-                        location.reload(); // Refresh to clean slate
+                        location.reload(); 
                         return;
                     }
                     fetch(SCRIPT_URL, {
@@ -477,10 +473,8 @@
             focusField(0);
         }
 
-        // Init
         focusField(0);
         updateOfflineUI();
-
     </script>
 </body>
 </html>
