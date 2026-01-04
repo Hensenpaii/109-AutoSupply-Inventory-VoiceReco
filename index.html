@@ -358,7 +358,7 @@
 
     <script>
         // CONFIG
-        const GOOGLE_SCRIPT_URL = " URL_HERE ";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6MKoHA1QNgDCfj42nMJgR7Ix42EuJH6vhxwa14oNUYlkJpOrXFxfa12P8VP38SJL0/exec";
 
         // SETUP
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -489,7 +489,20 @@
         function fillField(text) {
             const input = document.getElementById(`input-${currentField}`);
             let value = text.trim();
-
+            
+            // CRITICAL: Don't fill if the text is empty or just whitespace
+            if (!value || value === '...' || value.toLowerCase() === 'next') {
+                return;
+            }
+            
+            // Also check if this looks like a command that slipped through
+            const lower = value.toLowerCase();
+            if (lower === 'next' || lower === 'back' || lower === 'clear' || 
+                lower === 'save' || lower === 'done' || lower === 'nex') {
+                console.log('Command caught in fillField:', value);
+                return;
+            }
+            
             // Parse numbers for price and stock
             if (currentField === 3 || currentField === 4) {
                 value = parseNumber(value);
@@ -498,7 +511,7 @@
             else if (currentField === 0 || currentField === 2) {
                 value = value.toUpperCase();
             }
-
+            
             input.value = value;
             console.log(`Field ${currentField} set to: ${value}`);
         }
@@ -696,3 +709,4 @@
     </script>
 </body>
 </html>
+
