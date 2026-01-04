@@ -3,106 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory - Balanced</title>
+    <title>Voice Inventory</title>
     <style>
-        :root {
-            --bg: #0a0a0a;
-            --card: #1a1a1a;
-            --accent: #00ff88;
-            --text: #ffffff;
-            --dim: #666666;
-            --red: #ff3366;
-            --yellow: #ffaa00;
-            --blue: #00aaff;
-        }
-
-        * { 
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 15px;
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #0d0d0d;
+            color: #fff;
+            padding: 20px;
             min-height: 100vh;
         }
 
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        /* HEADER */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            letter-spacing: -0.5px;
+            margin-bottom: 10px;
         }
 
-        .timer {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--accent);
-            font-variant-numeric: tabular-nums;
+        .status {
+            color: #00ff88;
+            font-size: 1.1rem;
+            font-weight: 600;
+            min-height: 30px;
         }
 
-        /* MIC CONTROL */
-        .mic-control {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-            position: relative;
+        /* MIC BUTTON */
+        .mic-section {
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        .mic-control.listening {
-            border-color: var(--accent);
-            background: linear-gradient(135deg, #1a1a1a 0%, #1a2a1a 100%);
-        }
-
-        .auto-advance-bar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 3px;
-            background: var(--accent);
-            width: 0;
-            transition: width 0.1s linear;
-            border-radius: 0 0 16px 16px;
-        }
-
-        #mic-btn {
-            width: 60px;
-            height: 60px;
+        .mic-btn {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             border: none;
-            background: var(--accent);
-            color: var(--bg);
-            font-size: 1.8rem;
+            background: #00ff88;
+            color: #000;
+            font-size: 2.5rem;
             cursor: pointer;
-            transition: all 0.2s;
-            flex-shrink: 0;
+            transition: 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
         }
 
-        #mic-btn.active {
+        .mic-btn.listening {
+            background: #ff3366;
             animation: pulse 1.5s infinite;
-            background: var(--red);
         }
 
         @keyframes pulse {
@@ -110,341 +72,205 @@
             50% { transform: scale(1.05); }
         }
 
-        .mic-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .mic-status {
-            font-size: 0.75rem;
-            color: var(--dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-        }
-
-        .mic-text {
-            font-size: 1.1rem;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .mic-text.command {
-            color: var(--yellow);
-        }
-
-        /* QUICK NAVIGATION */
-        .quick-nav {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .nav-btn {
-            flex: 1;
-            padding: 12px;
-            background: var(--card);
-            border: 1px solid #333;
-            color: var(--text);
+        .transcript {
+            margin-top: 15px;
+            padding: 15px;
+            background: #1a1a1a;
             border-radius: 10px;
-            font-size: 0.9rem;
+            min-height: 50px;
+            color: #00ff88;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        /* CONTROLS */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 15px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            color: #fff;
+            border-radius: 10px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: 0.2s;
         }
 
-        .nav-btn:active {
+        .control-btn:active {
             background: #2a2a2a;
-            transform: scale(0.97);
+            transform: scale(0.98);
         }
 
         /* FORM */
-        .quick-form {
+        .form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
-        .field {
-            background: var(--card);
+        .field-group {
+            background: #1a1a1a;
+            padding: 20px;
             border-radius: 12px;
-            padding: 15px;
-            border-left: 3px solid var(--dim);
-            transition: all 0.15s;
-            position: relative;
+            border-left: 4px solid #333;
+            transition: 0.2s;
         }
 
-        .field.active {
-            border-left-color: var(--accent);
-            background: linear-gradient(90deg, #1a2a1a 0%, #1a1a1a 100%);
-            transform: translateX(3px);
-        }
-
-        .field.filled {
-            border-left-color: var(--blue);
-        }
-
-        .field.error {
-            border-left-color: var(--red);
-            animation: shake 0.3s;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(3px); }
-            25% { transform: translateX(0); }
-            75% { transform: translateX(6px); }
+        .field-group.active {
+            border-left-color: #00ff88;
+            background: #1f2a1f;
         }
 
         .field-label {
-            font-size: 0.7rem;
-            color: var(--dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .field-num {
-            color: var(--accent);
+        .field-number {
+            color: #00ff88;
             font-weight: 700;
         }
 
         .field-input {
+            width: 100%;
             background: none;
             border: none;
-            color: var(--text);
-            font-size: 1.3rem;
+            color: #fff;
+            font-size: 1.4rem;
             font-weight: 600;
-            width: 100%;
             outline: none;
+            padding: 0;
         }
 
         .field-input::placeholder {
-            color: var(--dim);
-            opacity: 0.5;
+            color: #444;
         }
 
-        /* ACTIONS */
-        .actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .btn {
-            padding: 18px;
+        /* SAVE BUTTON */
+        .save-btn {
+            width: 100%;
+            padding: 20px;
+            background: #00ff88;
+            color: #000;
             border: none;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 1.2rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            margin-bottom: 20px;
+            transition: 0.2s;
         }
 
-        .btn-save {
-            background: var(--accent);
-            color: var(--bg);
-            grid-column: 1 / -1;
-        }
-
-        .btn-save:active {
+        .save-btn:active {
             transform: scale(0.98);
         }
 
-        .btn-save:disabled {
+        .save-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .btn-secondary {
-            background: var(--card);
-            color: var(--text);
-            border: 1px solid #333;
-        }
-
-        /* STATS */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .stat {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--dim);
-            text-transform: uppercase;
-            margin-top: 4px;
-        }
-
         /* LOG */
         .log {
-            background: var(--card);
+            background: #1a1a1a;
             border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .log-header {
-            padding: 15px;
+            padding: 15px 20px;
             background: #222;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             cursor: pointer;
-            user-select: none;
         }
 
-        .log-badge {
-            background: var(--accent);
-            color: var(--bg);
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 0.8rem;
+        .log-count {
+            background: #00ff88;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 12px;
             font-weight: 700;
+            font-size: 0.9rem;
         }
 
-        .log-content {
+        .log-items {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s;
         }
 
-        .log-content.open {
-            max-height: 300px;
+        .log-items.open {
+            max-height: 400px;
             overflow-y: auto;
         }
 
         .log-item {
-            padding: 12px 15px;
+            padding: 15px 20px;
             border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
         .log-item-name {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            margin-bottom: 5px;
         }
 
-        .log-item-info {
-            font-size: 0.75rem;
-            color: var(--dim);
-            margin-top: 2px;
-        }
-
-        .log-time {
-            color: var(--dim);
-            font-size: 0.7rem;
-        }
-
-        .tips {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 12px;
-            border-left: 3px solid var(--accent);
-        }
-
-        .tips h3 {
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-            color: var(--accent);
-        }
-
-        .tips ul {
-            list-style: none;
+        .log-item-details {
             font-size: 0.85rem;
-            line-height: 1.8;
-            color: var(--dim);
+            color: #888;
         }
 
-        .tips li::before {
+        /* HELP */
+        .help {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #00ff88;
+        }
+
+        .help h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .help ul {
+            list-style: none;
+            line-height: 2;
+            color: #aaa;
+        }
+
+        .help li::before {
             content: "→ ";
-            color: var(--accent);
-        }
-
-        .tips .cmd {
-            color: var(--yellow);
+            color: #00ff88;
             font-weight: 700;
         }
 
-        /* TOGGLE SWITCH */
-        .setting {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: var(--card);
-            border-radius: 12px;
-            margin-bottom: 15px;
-        }
-
-        .setting-label {
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .setting-desc {
-            font-size: 0.75rem;
-            color: var(--dim);
-            margin-top: 3px;
-        }
-
-        .toggle {
-            position: relative;
-            width: 50px;
-            height: 28px;
-            background: #333;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .toggle.on {
-            background: var(--accent);
-        }
-
-        .toggle-knob {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 22px;
-            height: 22px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        .toggle.on .toggle-knob {
-            left: 25px;
+        .cmd {
+            color: #ffaa00;
+            font-weight: 700;
         }
 
         @media (max-width: 600px) {
-            body { padding: 10px; }
-            h1 { font-size: 1.3rem; }
-            .timer { font-size: 1.5rem; }
+            body { padding: 15px; }
+            h1 { font-size: 1.5rem; }
+            .mic-btn { width: 70px; height: 70px; font-size: 2rem; }
         }
     </style>
 </head>
@@ -452,466 +278,306 @@
     <div class="container">
         <div class="header">
             <h1>🎤 Voice Inventory</h1>
-            <div class="timer" id="timer">00:00</div>
+            <div class="status" id="status">Click mic to start</div>
         </div>
 
-        <div class="mic-control" id="mic-control">
-            <button id="mic-btn" onclick="toggleMic()">🎤</button>
-            <div class="mic-info">
-                <div class="mic-status" id="mic-status">READY</div>
-                <div class="mic-text" id="mic-text">Tap mic to start</div>
-            </div>
-            <div class="auto-advance-bar" id="progress-bar"></div>
+        <div class="mic-section">
+            <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+            <div class="transcript" id="transcript">...</div>
         </div>
 
-        <div class="quick-nav">
-            <button class="nav-btn" onclick="goBack()">⬅️ BACK</button>
-            <button class="nav-btn" onclick="goNext()">NEXT ➡️</button>
-            <button class="nav-btn" onclick="skipField()">SKIP ⏭️</button>
+        <div class="controls">
+            <button class="control-btn" onclick="prevField()">⬅️ Back</button>
+            <button class="control-btn" onclick="nextField()">Next ➡️</button>
+            <button class="control-btn" onclick="clearAll()">🗑️ Clear</button>
         </div>
 
-        <div class="quick-form">
-            <div class="field active" id="field-0">
+        <div class="form">
+            <div class="field-group active" id="field-0">
                 <div class="field-label">
                     <span>Product Name</span>
-                    <span class="field-num">1/5</span>
+                    <span class="field-number">1/5</span>
                 </div>
-                <input type="text" class="field-input" id="input-0" placeholder="Engine Oil..." readonly>
+                <input type="text" class="field-input" id="input-0" placeholder="Engine Oil...">
             </div>
-            <div class="field" id="field-1">
+
+            <div class="field-group" id="field-1">
                 <div class="field-label">
                     <span>Category</span>
-                    <span class="field-num">2/5</span>
+                    <span class="field-number">2/5</span>
                 </div>
-                <input type="text" class="field-input" id="input-1" placeholder="Lubricants..." readonly>
+                <input type="text" class="field-input" id="input-1" placeholder="Lubricants...">
             </div>
-            <div class="field" id="field-2">
+
+            <div class="field-group" id="field-2">
                 <div class="field-label">
                     <span>Unit</span>
-                    <span class="field-num">3/5</span>
+                    <span class="field-number">3/5</span>
                 </div>
-                <input type="text" class="field-input" id="input-2" placeholder="Bottle..." readonly>
+                <input type="text" class="field-input" id="input-2" placeholder="Bottle...">
             </div>
-            <div class="field" id="field-3">
+
+            <div class="field-group" id="field-3">
                 <div class="field-label">
-                    <span>Price</span>
-                    <span class="field-num">4/5</span>
+                    <span>Price (₱)</span>
+                    <span class="field-number">4/5</span>
                 </div>
-                <input type="text" class="field-input" id="input-3" placeholder="250..." readonly>
+                <input type="text" class="field-input" id="input-3" placeholder="250">
             </div>
-            <div class="field" id="field-4">
+
+            <div class="field-group" id="field-4">
                 <div class="field-label">
-                    <span>Stock</span>
-                    <span class="field-num">5/5</span>
+                    <span>Stock Quantity</span>
+                    <span class="field-number">5/5</span>
                 </div>
-                <input type="text" class="field-input" id="input-4" placeholder="50..." readonly>
+                <input type="text" class="field-input" id="input-4" placeholder="50">
             </div>
         </div>
 
-        <div class="setting">
-            <div>
-                <div class="setting-label">Auto-Advance</div>
-                <div class="setting-desc">Move to next field after 3 seconds</div>
-            </div>
-            <div class="toggle" id="auto-toggle" onclick="toggleAuto()">
-                <div class="toggle-knob"></div>
-            </div>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-save" id="save-btn" onclick="saveItem()">
-                💾 SAVE (or say "DONE")
-            </button>
-            <button class="btn btn-secondary" onclick="clearForm()">🗑️ Clear</button>
-            <button class="btn btn-secondary" onclick="repeatLast()">🔄 Repeat</button>
-        </div>
-
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-value" id="stat-today">0</div>
-                <div class="stat-label">Today</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="stat-avg">--</div>
-                <div class="stat-label">Avg Time</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="stat-best">--</div>
-                <div class="stat-label">Best</div>
-            </div>
-        </div>
+        <button class="save-btn" id="save-btn" onclick="saveData()">💾 SAVE TO SHEET</button>
 
         <div class="log">
             <div class="log-header" onclick="toggleLog()">
-                <span>📋 Recent Items</span>
-                <span class="log-badge" id="log-count">0</span>
+                <span style="font-weight:600">📋 Saved Items</span>
+                <span class="log-count" id="log-count">0</span>
             </div>
-            <div class="log-content" id="log-content">
-                <div id="log-items"></div>
-            </div>
+            <div class="log-items" id="log-items"></div>
         </div>
 
-        <div class="tips">
-            <h3>⚡ Commands</h3>
+        <div class="help">
+            <h3>Voice Commands</h3>
             <ul>
-                <li><span class="cmd">NEXT</span> - move forward</li>
-                <li><span class="cmd">BACK</span> - go to previous field (fix mistakes!)</li>
-                <li><span class="cmd">SKIP</span> - leave field empty</li>
-                <li><span class="cmd">DONE</span> - save item to sheet</li>
-                <li><span class="cmd">CLEAR</span> - clear all fields</li>
-                <li>Enable Auto-Advance for speed (optional)</li>
+                <li><span class="cmd">NEXT</span> - Move to next field</li>
+                <li><span class="cmd">BACK</span> - Go back to previous field</li>
+                <li><span class="cmd">DONE</span> - Save item</li>
+                <li><span class="cmd">CLEAR</span> - Clear all fields</li>
+                <li>Just speak naturally to fill fields</li>
             </ul>
         </div>
     </div>
 
     <script>
+        // CONFIG
+        const GOOGLE_SCRIPT_URL = " URL_HERE ";
+
+        // SETUP
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = SpeechRecognition ? new SpeechRecognition() : null;
-
-        if (!recognition) {
-            alert("⚠️ Voice not supported. Use Chrome.");
-        } else {
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+        if (!SpeechRecognition) {
+            alert("⚠️ Voice recognition not supported. Use Chrome.");
         }
 
-        let isListening = false;
-        let activeIndex = 0;
-        let isSaving = false;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        // STATE
+        let listening = false;
+        let currentField = 0;
+        let saving = false;
         let savedItems = [];
-        let autoAdvanceTimer = null;
-        let autoAdvanceEnabled = false;
-        let sessionTimes = [];
-        let startTime = null;
-        let timerInterval = null;
+        let lastCommand = '';
         let lastCommandTime = 0;
-        let progressInterval = null;
 
+        // ELEMENTS
         const micBtn = document.getElementById('mic-btn');
-        const micControl = document.getElementById('mic-control');
-        const micStatus = document.getElementById('mic-status');
-        const micText = document.getElementById('mic-text');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
         const saveBtn = document.getElementById('save-btn');
-        const timerEl = document.getElementById('timer');
-        const progressBar = document.getElementById('progress-bar');
-        const autoToggle = document.getElementById('auto-toggle');
+        const logItems = document.getElementById('log-items');
+        const logCount = document.getElementById('log-count');
 
-        // LOAD DATA
-        function loadData() {
-            const stored = localStorage.getItem('inventoryLog');
-            if (stored) {
-                savedItems = JSON.parse(stored);
+        // LOAD SAVED ITEMS
+        function loadItems() {
+            const saved = localStorage.getItem('inventoryItems');
+            if (saved) {
+                savedItems = JSON.parse(saved);
                 updateLog();
-                updateStats();
             }
-
-            const autoSetting = localStorage.getItem('autoAdvance');
-            if (autoSetting === 'true') {
-                autoAdvanceEnabled = true;
-                autoToggle.classList.add('on');
-            }
-        }
-
-        function toggleAuto() {
-            autoAdvanceEnabled = !autoAdvanceEnabled;
-            autoToggle.classList.toggle('on');
-            localStorage.setItem('autoAdvance', autoAdvanceEnabled);
-            
-            if (!autoAdvanceEnabled) {
-                clearAutoAdvance();
-            }
-        }
-
-        // TIMER
-        function startTimer() {
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const seconds = Math.floor(elapsed / 1000);
-                const ms = Math.floor((elapsed % 1000) / 10);
-                timerEl.textContent = `${String(seconds).padStart(2, '0')}:${String(ms).padStart(2, '0')}`;
-            }, 10);
-        }
-
-        function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-            const elapsed = startTime ? Date.now() - startTime : 0;
-            return elapsed;
-        }
-
-        function resetTimer() {
-            timerEl.textContent = '00:00';
         }
 
         // MIC CONTROL
         function toggleMic() {
-            if (isListening) {
-                stopListening();
+            if (listening) {
+                stopMic();
             } else {
-                startListening();
+                startMic();
             }
         }
 
-        function startListening() {
-            if (!recognition || isListening) return;
-
+        function startMic() {
             try {
                 recognition.start();
-                isListening = true;
-                micBtn.classList.add('active');
-                micControl.classList.add('listening');
-                micStatus.textContent = 'LISTENING';
-                startTimer();
-                highlightField(activeIndex);
+                listening = true;
+                micBtn.classList.add('listening');
+                updateStatus();
             } catch (e) {
-                console.log("Start error:", e);
+                console.log('Mic already running');
             }
         }
 
-        function stopListening() {
-            if (!recognition) return;
-            try { recognition.stop(); } catch(e) {}
-            isListening = false;
-            micBtn.classList.remove('active');
-            micControl.classList.remove('listening');
-            micStatus.textContent = 'PAUSED';
-            clearAutoAdvance();
-            stopTimer();
+        function stopMic() {
+            try {
+                recognition.stop();
+            } catch (e) {}
+            listening = false;
+            micBtn.classList.remove('listening');
+            status.textContent = 'Paused';
         }
 
-        // AUTO-ADVANCE
-        function startAutoAdvance() {
-            if (!autoAdvanceEnabled) return;
-            
-            clearAutoAdvance();
-            
-            const duration = 3000; // 3 seconds
-            const startTime = Date.now();
-            
-            progressInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min((elapsed / duration) * 100, 100);
-                progressBar.style.width = progress + '%';
-                
-                if (progress >= 100) {
-                    clearAutoAdvance();
-                }
-            }, 50);
-            
-            autoAdvanceTimer = setTimeout(() => {
-                if (activeIndex < 4) {
-                    goNext();
-                }
-            }, duration);
+        function updateStatus() {
+            const fields = ['Product Name', 'Category', 'Unit', 'Price', 'Stock'];
+            status.textContent = `🎤 ${fields[currentField]}`;
         }
 
-        function clearAutoAdvance() {
-            if (autoAdvanceTimer) {
-                clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = null;
-            }
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-            }
-            progressBar.style.width = '0';
-        }
-
-        // NUMBER PARSING
-        function parseNumber(text) {
-            const words = {
-                'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
-                'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
-                'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13,
-                'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17,
-                'eighteen': 18, 'nineteen': 19, 'twenty': 20, 'thirty': 30,
-                'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
-                'eighty': 80, 'ninety': 90, 'hundred': 100, 'thousand': 1000
-            };
-
-            let str = text.toLowerCase().trim();
-            
-            if (words[str] !== undefined) return String(words[str]);
-
-            Object.keys(words).forEach(word => {
-                str = str.replace(new RegExp(`\\b${word}\\b`, 'g'), String(words[word]));
-            });
-
-            const nums = str.match(/\d+/g);
-            if (nums && nums.length === 2) {
-                const [a, b] = nums.map(Number);
-                if (a >= 20 && a <= 90 && b <= 9) return String(a + b);
-            }
-
-            if (nums && nums.length > 1) {
-                let total = 0;
-                let current = 0;
-                for (let num of nums.map(Number)) {
-                    if (num >= 1000) {
-                        current = (current || 1) * num;
-                        total += current;
-                        current = 0;
-                    } else if (num >= 100) {
-                        current = (current || 1) * num;
-                    } else {
-                        current += num;
-                    }
-                }
-                total += current;
-                return String(total);
-            }
-
-            str = str.replace(/[^0-9.]/g, '');
-            return str || text;
-        }
-
-        // VOICE HANDLER
+        // VOICE RECOGNITION
         recognition.onresult = (event) => {
-            if (isSaving) return;
+            if (saving) return;
 
             const result = event.results[event.results.length - 1];
-            const text = result[0].transcript;
-            const textLower = text.toLowerCase().trim();
+            const text = result[0].transcript.trim();
+            const lower = text.toLowerCase();
             const isFinal = result.isFinal;
 
             // Show what's heard
-            micText.textContent = text;
-            micText.classList.remove('command');
-
-            // Clear auto-advance when user speaks
-            clearAutoAdvance();
+            transcript.textContent = text;
 
             if (isFinal) {
                 const now = Date.now();
-                
-                // Debounce
-                if (now - lastCommandTime < 500) {
-                    console.log("Debounced");
+
+                // Prevent duplicate commands
+                if (lower === lastCommand && now - lastCommandTime < 800) {
+                    console.log('Duplicate command blocked');
                     return;
                 }
 
-                // COMMANDS
-                if (textLower === 'next' || textLower === 'nex') {
+                // Check for commands
+                if (lower === 'next' || lower === 'nex') {
+                    lastCommand = lower;
                     lastCommandTime = now;
-                    goNext();
-                    micText.classList.add('command');
+                    nextField();
                     return;
                 }
 
-                if (textLower === 'back' || textLower === 'previous') {
+                if (lower === 'back' || lower === 'previous') {
+                    lastCommand = lower;
                     lastCommandTime = now;
-                    goBack();
-                    micText.classList.add('command');
+                    prevField();
                     return;
                 }
 
-                if (textLower === 'skip') {
+                if (lower === 'done' || lower === 'save') {
+                    lastCommand = lower;
                     lastCommandTime = now;
-                    skipField();
-                    micText.classList.add('command');
+                    saveData();
                     return;
                 }
 
-                if (textLower === 'done' || textLower === 'save') {
+                if (lower === 'clear' || lower === 'clear all') {
+                    lastCommand = lower;
                     lastCommandTime = now;
-                    saveItem();
-                    micText.classList.add('command');
+                    clearAll();
                     return;
                 }
 
-                if (textLower === 'clear' || textLower === 'clear form') {
-                    lastCommandTime = now;
-                    clearForm();
-                    micText.classList.add('command');
-                    return;
-                }
-
-                // INPUT
-                updateField(text);
-                
-                // Start auto-advance if enabled
-                if (autoAdvanceEnabled) {
-                    startAutoAdvance();
-                }
+                // Not a command - input data
+                fillField(text);
             }
         };
 
-        function updateField(text) {
-            const input = document.getElementById(`input-${activeIndex}`);
+        // FILL FIELD
+        function fillField(text) {
+            const input = document.getElementById(`input-${currentField}`);
             let value = text.trim();
 
-            // Number fields
-            if (activeIndex === 3 || activeIndex === 4) {
+            // Parse numbers for price and stock
+            if (currentField === 3 || currentField === 4) {
                 value = parseNumber(value);
-            } else if (activeIndex === 0 || activeIndex === 2) {
+            }
+            // Uppercase for name and unit
+            else if (currentField === 0 || currentField === 2) {
                 value = value.toUpperCase();
             }
 
             input.value = value;
-            document.getElementById(`field-${activeIndex}`).classList.add('filled');
-            document.getElementById(`field-${activeIndex}`).classList.remove('error');
+            console.log(`Field ${currentField} set to: ${value}`);
         }
 
-        function goNext() {
-            clearAutoAdvance();
-            if (activeIndex < 4) {
-                activeIndex++;
-                highlightField(activeIndex);
+        // PARSE NUMBERS
+        function parseNumber(text) {
+            const numbers = {
+                'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+                'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+                'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
+                'fourteen': '14', 'fifteen': '15', 'twenty': '20', 'thirty': '30',
+                'forty': '40', 'fifty': '50', 'sixty': '60', 'seventy': '70',
+                'eighty': '80', 'ninety': '90', 'hundred': '100', 'thousand': '1000'
+            };
+
+            let str = text.toLowerCase();
+
+            // Replace number words
+            Object.keys(numbers).forEach(word => {
+                str = str.replace(new RegExp(`\\b${word}\\b`, 'g'), numbers[word]);
+            });
+
+            // Handle "20 5" -> "25"
+            const nums = str.match(/\d+/g);
+            if (nums && nums.length === 2) {
+                const [a, b] = nums.map(Number);
+                if (a >= 20 && a <= 90 && b <= 9) {
+                    return String(a + b);
+                }
+            }
+
+            // Extract numbers
+            const result = str.replace(/[^0-9.]/g, '');
+            return result || text;
+        }
+
+        // NAVIGATION
+        function nextField() {
+            if (currentField < 4) {
+                currentField++;
+                highlightField(currentField);
             }
         }
 
-        function goBack() {
-            clearAutoAdvance();
-            if (activeIndex > 0) {
-                activeIndex--;
-                highlightField(activeIndex);
-            }
-        }
-
-        function skipField() {
-            clearAutoAdvance();
-            if (activeIndex < 4) {
-                activeIndex++;
-                highlightField(activeIndex);
+        function prevField() {
+            if (currentField > 0) {
+                currentField--;
+                highlightField(currentField);
             }
         }
 
         function highlightField(index) {
-            document.querySelectorAll('.field').forEach(f => f.classList.remove('active'));
-            document.getElementById(`field-${index}`).classList.add('active');
-            document.getElementById(`field-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            const fieldNames = ['Product Name', 'Category', 'Unit', 'Price', 'Stock'];
-            if (isListening) {
-                micText.textContent = `Say ${fieldNames[index]}...`;
+            // Remove active from all
+            for (let i = 0; i < 5; i++) {
+                document.getElementById(`field-${i}`).classList.remove('active');
             }
+            // Add active to current
+            document.getElementById(`field-${index}`).classList.add('active');
+            // Scroll into view
+            document.getElementById(`field-${index}`).scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            updateStatus();
         }
 
-        function repeatLast() {
-            if (savedItems.length === 0) return;
-            
-            const last = savedItems[0];
-            document.getElementById('input-0').value = last.name;
-            document.getElementById('input-1').value = last.category;
-            document.getElementById('input-2').value = last.unit;
-            
-            for (let i = 0; i < 3; i++) {
-                document.getElementById(`field-${i}`).classList.add('filled');
+        // CLEAR
+        function clearAll() {
+            for (let i = 0; i < 5; i++) {
+                document.getElementById(`input-${i}`).value = '';
             }
-            
-            activeIndex = 3;
-            highlightField(3);
+            currentField = 0;
+            highlightField(0);
+            transcript.textContent = '...';
         }
 
         // SAVE
-        function saveItem() {
-            if (isSaving) return;
-
-            clearAutoAdvance();
+        function saveData() {
+            if (saving) return;
 
             const data = {
                 name: document.getElementById('input-0').value,
@@ -919,125 +585,98 @@
                 unit: document.getElementById('input-2').value,
                 price: document.getElementById('input-3').value,
                 stock: document.getElementById('input-4').value,
-                timestamp: new Date().toLocaleString(),
-                time: stopTimer()
+                timestamp: new Date().toLocaleString()
             };
 
             if (!data.name) {
-                alert("❌ Product name required!");
-                document.getElementById('field-0').classList.add('error');
-                activeIndex = 0;
+                alert('❌ Product name is required!');
+                currentField = 0;
                 highlightField(0);
-                startTimer();
                 return;
             }
 
-            isSaving = true;
+            saving = true;
             saveBtn.disabled = true;
-            saveBtn.textContent = "⏳ Saving...";
-            micText.textContent = "Saving to sheet...";
+            saveBtn.textContent = '⏳ Saving...';
+            status.textContent = 'Saving to Google Sheets...';
 
-            // Save locally
+            // Save to local log
             savedItems.unshift(data);
-            if (data.time > 0) sessionTimes.push(data.time);
-            localStorage.setItem('inventoryLog', JSON.stringify(savedItems));
+            localStorage.setItem('inventoryItems', JSON.stringify(savedItems));
             updateLog();
-            updateStats();
 
             // Send to Google Sheets
-            const scriptURL = " URL_HERE ";
-            fetch(scriptURL, {
+            fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            .then(() => finishSave(data))
-            .catch(() => finishSave(data));
+            .then(() => {
+                finishSave(data);
+            })
+            .catch(err => {
+                console.error('Save error:', err);
+                finishSave(data);
+            });
 
-            setTimeout(() => finishSave(data), 3000);
+            // Timeout fallback
+            setTimeout(() => {
+                if (saving) finishSave(data);
+            }, 3000);
         }
 
         function finishSave(data) {
-            if (!isSaving) return;
-            isSaving = false;
+            if (!saving) return;
+            saving = false;
+
+            status.textContent = `✅ Saved: ${data.name}`;
+            saveBtn.textContent = '💾 SAVE TO SHEET';
             saveBtn.disabled = false;
+            transcript.textContent = '✅ Item saved!';
 
-            const seconds = (data.time / 1000).toFixed(1);
-            micText.textContent = `✅ Saved in ${seconds}s!`;
-            saveBtn.textContent = "💾 SAVE";
+            clearAll();
 
-            clearForm();
-            resetTimer();
-            
             setTimeout(() => {
-                if (isListening) {
-                    micText.textContent = "Say Product Name...";
-                } else {
-                    micText.textContent = "Tap mic to continue";
+                if (listening) {
+                    updateStatus();
+                    transcript.textContent = '...';
                 }
             }, 2000);
         }
 
-        function clearForm() {
-            for (let i = 0; i < 5; i++) {
-                document.getElementById(`input-${i}`).value = '';
-                document.getElementById(`field-${i}`).classList.remove('filled', 'error');
-            }
-            activeIndex = 0;
-            highlightField(0);
-            clearAutoAdvance();
-        }
-
+        // LOG
         function toggleLog() {
-            document.getElementById('log-content').classList.toggle('open');
+            logItems.classList.toggle('open');
         }
 
         function updateLog() {
-            const count = document.getElementById('log-count');
-            const items = document.getElementById('log-items');
-            
-            count.textContent = savedItems.length;
-            
+            logCount.textContent = savedItems.length;
+
             if (savedItems.length === 0) {
-                items.innerHTML = '<div style="padding:20px;text-align:center;color:#666">No items yet</div>';
+                logItems.innerHTML = '<div style="padding:20px;text-align:center;color:#666">No items yet</div>';
                 return;
             }
 
-            items.innerHTML = savedItems.slice(0, 10).map(item => {
-                const time = item.time ? `${(item.time / 1000).toFixed(1)}s` : '--';
-                return `
-                    <div class="log-item">
-                        <div>
-                            <div class="log-item-name">${item.name}</div>
-                            <div class="log-item-info">₱${item.price} • ${item.stock} ${item.unit}</div>
-                        </div>
-                        <div class="log-time">${time}</div>
+            logItems.innerHTML = savedItems.slice(0, 20).map(item => `
+                <div class="log-item">
+                    <div class="log-item-name">${item.name}</div>
+                    <div class="log-item-details">
+                        ${item.category} • ${item.unit} • ₱${item.price} • Qty: ${item.stock}
                     </div>
-                `;
-            }).join('');
-        }
-
-        function updateStats() {
-            document.getElementById('stat-today').textContent = savedItems.length;
-            
-            if (sessionTimes.length > 0) {
-                const avg = sessionTimes.reduce((a, b) => a + b, 0) / sessionTimes.length;
-                const best = Math.min(...sessionTimes);
-                document.getElementById('stat-avg').textContent = `${(avg / 1000).toFixed(1)}s`;
-                document.getElementById('stat-best').textContent = `${(best / 1000).toFixed(1)}s`;
-            }
+                </div>
+            `).join('');
         }
 
         // ERROR HANDLING
         recognition.onend = () => {
-            if (isListening && !isSaving) {
+            if (listening && !saving) {
                 setTimeout(() => {
-                    try { recognition.start(); }
-                    catch (e) {
-                        isListening = false;
-                        micBtn.classList.remove('active');
-                        micControl.classList.remove('listening');
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        listening = false;
+                        micBtn.classList.remove('listening');
                     }
                 }, 100);
             }
@@ -1045,15 +684,14 @@
 
         recognition.onerror = (event) => {
             if (event.error === 'not-allowed') {
-                alert("⚠️ Please allow microphone access");
-                isListening = false;
-                micBtn.classList.remove('active');
-                micControl.classList.remove('listening');
+                alert('⚠️ Please allow microphone access');
+                listening = false;
+                micBtn.classList.remove('listening');
             }
         };
 
-        // INIT
-        loadData();
+        // INITIALIZE
+        loadItems();
         highlightField(0);
     </script>
 </body>
