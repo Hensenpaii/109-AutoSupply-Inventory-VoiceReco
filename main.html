@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Voice Inventory System</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --highlight: #00d4ff; 
+            --listening: #ff4757; 
+            --success: #2ed573;
+            --correction: #ffa502;
+            --disabled: #666;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 { 
+            font-weight: 300; 
+            letter-spacing: 1px; 
+            margin-bottom: 10px; 
+            text-align: center;
+            font-size: clamp(1.5rem, 5vw, 2rem);
+        }
+
+        #status-text { 
+            color: var(--highlight); 
+            min-height: 50px; 
+            margin-bottom: 20px; 
+            font-weight: bold;
+            text-align: center;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        #mic-btn {
+            width: 80px; 
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            background-color: #333;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+            position: relative;
+        }
+        #mic-btn.active { 
+            background-color: var(--listening); 
+            transform: scale(1.1);
+            animation: pulse 1.5s infinite;
+        }
+        #mic-btn:disabled {
+            background-color: var(--disabled);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5); }
+            50% { box-shadow: 0 5px 30px rgba(255, 71, 87, 0.8); }
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: #333;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        .transcript-box {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            min-height: 60px;
+            border: 2px solid #333;
+        }
+
+        .transcript-label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .transcript-text {
+            color: var(--highlight);
+            font-size: 1.1rem;
+            word-wrap: break-word;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #333; 
+            transition: all 0.3s ease; 
+            position: relative;
+        }
+
+        .input-group.active {
+            border-left-color: var(--highlight);
+            background-color: #2a2a2a;
+            transform: translateX(10px);
+        }
+
+        .input-group.locked {
+            border-left-color: var(--success);
+            opacity: 0.7;
+        }
+
+        .input-group.correction {
+            border-left-color: var(--correction);
+            background-color: #2a2a2a;
+            transform: translateX(10px);
+        }
+
+        .field-number {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .input-group.active .field-number {
+            background: var(--highlight);
+            color: #121212;
+        }
+
+        label { 
+            display: block; 
+            color: #888; 
+            font-size: 0.8rem; 
+            text-transform: uppercase; 
+            margin-bottom: 5px; 
+        }
+        
+        input {
+            width: 100%; 
+            background: transparent; 
+            border: none;
+            color: white; 
+            font-size: 1.3rem; 
+            font-weight: 600; 
+            outline: none;
+            padding: 5px 0;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 18px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .save-btn {
+            background-color: var(--success);
+            color: #121212;
+        }
+
+        .clear-btn {
+            background-color: #ff4757;
+            color: white;
+        }
+
+        .action-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .commands-help {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .commands-help h3 {
+            margin-top: 0;
+            color: var(--highlight);
+            font-size: 1rem;
+        }
+
+        .command {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .warning {
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            #mic-btn { width: 70px; height: 70px; font-size: 1.8rem; }
+            .nav-btn { padding: 8px 15px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Voice Inventory System</h1>
+        <div id="status-text">Click microphone ONCE to start</div>
+
+        <div class="controls">
+            <button id="mic-btn" onclick="toggleMic()" title="Click ONCE to start voice">🎤</button>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="previousField()">⬅️ Prev</button>
+                <button class="nav-btn" onclick="nextField()">Next ➡️</button>
+            </div>
+        </div>
+
+        <div class="transcript-box">
+            <div class="transcript-label">Listening for:</div>
+            <div class="transcript-text" id="transcript">—</div>
+        </div>
+
+        <div class="grid-container">
+            <div class="input-group" id="group-0">
+                <span class="field-number">1</span>
+                <label>Product Name</label>
+                <input type="text" id="input-0" placeholder="..." onclick="selectField(0)">
+            </div>
+            <div class="input-group" id="group-1">
+                <span class="field-number">2</span>
+                <label>Category</label>
+                <input type="text" id="input-1" placeholder="..." onclick="selectField(1)">
+            </div>
+            <div class="input-group" id="group-2">
+                <span class="field-number">3</span>
+                <label>Unit</label>
+                <input type="text" id="input-2" placeholder="..." onclick="selectField(2)">
+            </div>
+            <div class="input-group" id="group-3">
+                <span class="field-number">4</span>
+                <label>Price</label>
+                <input type="number" id="input-3" placeholder="..." onclick="selectField(3)">
+            </div>
+            <div class="input-group" id="group-4">
+                <span class="field-number">5</span>
+                <label>Stock Qty</label>
+                <input type="number" id="input-4" placeholder="..." onclick="selectField(4)">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="action-btn save-btn" onclick="saveToExcel()" id="save-btn">
+                💾 SAVE ITEM
+            </button>
+            <button class="action-btn clear-btn" onclick="clearForm()">
+                🗑️ CLEAR
+            </button>
+        </div>
+
+        <div class="commands-help">
+            <h3>Voice Commands:</h3>
+            • Say <span class="command">"NEXT"</span> to move forward<br>
+            • Say <span class="command">"BACK"</span> to go backward<br>
+            • Say <span class="command">"GO TO [NAME/CATEGORY/UNIT/PRICE/STOCK]"</span> to jump<br>
+            • Say <span class="command">"DONE"</span> to save immediately<br>
+            • Just speak naturally to fill the current field<br><br>
+            <strong>💡 Tip:</strong> Speak clearly, pause briefly between commands and data
+        </div>
+    </div>
+
+    <script>
+        // Browser Support Check
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            document.body.innerHTML = '<div class="warning"><h2>⚠️ Voice Not Supported</h2><p>Please use Google Chrome on Android or Desktop. iOS Safari does not support voice recognition.</p></div>' + document.body.innerHTML;
+            document.getElementById('mic-btn').disabled = true;
+        }
+
+        // Initialize Recognition - CONTINUOUS MODE
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true; // STAYS ON - NO REPEATED PERMISSIONS
+        recognition.interimResults = true; // Show what's being said in real-time
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        // State Management
+        let isListening = false;
+        let activeIndex = 0; 
+        const totalFields = 5;
+        let isSaving = false;
+        let lastFinalTranscript = '';
+        let processingCommand = false;
+
+        // DOM Elements
+        const statusText = document.getElementById('status-text');
+        const micBtn = document.getElementById('mic-btn');
+        const transcriptEl = document.getElementById('transcript');
+        const saveBtn = document.getElementById('save-btn');
+
+        // --- MICROPHONE CONTROL ---
+
+        function toggleMic() {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (isSaving) {
+                statusText.textContent = "⏳ Please wait, saving...";
+                return;
+            }
+
+            if (isListening) {
+                console.log("Already listening");
+                return;
+            }
+
+            try {
+                recognition.start();
+                isListening = true;
+                micBtn.classList.add('active');
+                updateStatus();
+                highlightField(activeIndex);
+                console.log("🎤 Microphone started - staying open continuously");
+            } catch (e) {
+                console.error("Start error:", e);
+                // If already started, just mark as listening
+                if (e.message && e.message.includes('already started')) {
+                    isListening = true;
+                    micBtn.classList.add('active');
+                }
+            }
+        }
+
+        function stopListening() {
+            try {
+                recognition.stop();
+            } catch(e) {
+                console.log("Stop error:", e);
+            }
+            
+            isListening = false;
+            micBtn.classList.remove('active');
+            statusText.textContent = "⏸️ Microphone stopped. Click to resume.";
+            console.log("🔇 Microphone stopped");
+        }
+
+        function updateStatus() {
+            statusText.textContent = `🎤 Listening continuously for: ${getFieldName(activeIndex)}`;
+        }
+
+        // --- VOICE RECOGNITION HANDLER ---
+
+        recognition.onresult = (event) => {
+            if (isSaving || processingCommand) return;
+
+            // Get interim and final results
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+
+            // Show what's being heard in real-time
+            const currentText = finalTranscript || interimTranscript;
+            transcriptEl.textContent = currentText || '—';
+
+            // Process only FINAL results to avoid duplicate triggers
+            if (finalTranscript && finalTranscript !== lastFinalTranscript) {
+                lastFinalTranscript = finalTranscript;
+                processFinalSpeech(finalTranscript.trim());
+            }
+        };
+
+        function processFinalSpeech(text) {
+            if (!text || processingCommand) return;
+            
+            processingCommand = true;
+            const textLower = text.toLowerCase();
+
+            console.log("🗣️ Heard:", text);
+
+            // 1. SAVE COMMAND
+            if (textLower === "done" || textLower === "save" || textLower === "finish") {
+                saveToExcel();
+                setTimeout(() => { processingCommand = false; }, 500);
+                return;
+            }
+
+            // 2. NAVIGATION: "NEXT"
+            if (textLower === "next" || textLower === "move on") {
+                nextField();
+                setTimeout(() => { processingCommand = false; }, 300);
+                return;
+            }
+
+            // 3. NAVIGATION: "BACK"
+            if (textLower === "back" || textLower === "previous") {
+                previousField();
+                setTimeout(() => { processingCommand = false; }, 300);
+                return;
+            }
+
+            // 4. JUMP COMMANDS: "GO TO [FIELD]"
+            if (textLower.startsWith("go to") || textLower.startsWith("jump to") || textLower.startsWith("change")) {
+                let targetIndex = -1;
+                if (textLower.includes("name") || textLower.includes("product")) targetIndex = 0;
+                else if (textLower.includes("category")) targetIndex = 1;
+                else if (textLower.includes("unit")) targetIndex = 2;
+                else if (textLower.includes("price")) targetIndex = 3;
+                else if (textLower.includes("stock") || textLower.includes("quantity")) targetIndex = 4;
+
+                if (targetIndex !== -1) {
+                    jumpToField(targetIndex);
+                    setTimeout(() => { processingCommand = false; }, 300);
+                    return;
+                }
+            }
+
+            // 5. DATA ENTRY: Everything else
+            updateCurrentInput(text);
+            setTimeout(() => { processingCommand = false; }, 200);
+        }
+
+        // --- INPUT PROCESSING ---
+
+        function textToNumber(text) {
+            const numberWords = {
+                'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+                'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+                'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
+                'fourteen': '14', 'fifteen': '15', 'sixteen': '16', 'seventeen': '17',
+                'eighteen': '18', 'nineteen': '19', 'twenty': '20', 'thirty': '30',
+                'forty': '40', 'fifty': '50', 'sixty': '60', 'seventy': '70',
+                'eighty': '80', 'ninety': '90', 'hundred': '100', 'thousand': '1000'
+            };
+
+            let result = text.toLowerCase();
+            
+            // Replace word numbers
+            for (let [word, num] of Object.entries(numberWords)) {
+                result = result.replace(new RegExp('\\b' + word + '\\b', 'g'), num);
+            }
+            
+            // Extract only numbers and decimal
+            result = result.replace(/[^0-9.]/g, '');
+            
+            return result || text;
+        }
+
+        function updateCurrentInput(text) {
+            const input = document.getElementById(`input-${activeIndex}`);
+            if (!text || text.length < 1) return;
+
+            let cleanText = text.trim();
+
+            if (input.type === 'number') {
+                input.value = textToNumber(cleanText);
+            } else if (activeIndex === 0 || activeIndex === 2) {
+                // Product Name and Unit: Uppercase
+                input.value = cleanText.toUpperCase();
+            } else {
+                input.value = cleanText;
+            }
+
+            // Visual feedback
+            input.style.color = 'var(--success)';
+            setTimeout(() => { input.style.color = 'white'; }, 300);
+            
+            console.log(`✅ Updated field ${activeIndex + 1}: ${input.value}`);
+        }
+
+        // --- NAVIGATION ---
+
+        function nextField() {
+            const currentGroup = document.getElementById(`group-${activeIndex}`);
+            currentGroup.classList.remove('active', 'correction');
+            currentGroup.classList.add('locked');
+
+            activeIndex = (activeIndex + 1) % totalFields;
+            highlightField(activeIndex);
+            updateStatus();
+            console.log(`➡️ Moved to field ${activeIndex + 1}`);
+        }
+
+        function previousField() {
+            const currentGroup = document.getElementById(`group-${activeIndex}`);
+            currentGroup.classList.remove('active', 'correction');
+
+            activeIndex = (activeIndex - 1 + totalFields) % totalFields;
+            highlightField(activeIndex);
+            updateStatus();
+            console.log(`⬅️ Moved to field ${activeIndex + 1}`);
+        }
+
+        function jumpToField(targetIndex) {
+            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
+            activeIndex = targetIndex;
+            highlightField(activeIndex, true);
+            updateStatus();
+            console.log(`🎯 Jumped to field ${activeIndex + 1}`);
+        }
+
+        function selectField(index) {
+            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
+            activeIndex = index;
+            highlightField(index);
+            updateStatus();
+        }
+
+        function highlightField(index, isCorrection = false) {
+            // Reset all fields
+            for (let i = 0; i < totalFields; i++) {
+                const group = document.getElementById(`group-${i}`);
+                group.classList.remove('active', 'correction');
+            }
+            
+            const newGroup = document.getElementById(`group-${index}`);
+            newGroup.classList.remove('locked');
+            newGroup.classList.add(isCorrection ? 'correction' : 'active');
+            
+            newGroup.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        function getFieldName(index) {
+            const names = ['Product Name', 'Category', 'Unit', 'Price', 'Stock Quantity'];
+            return names[index];
+        }
+
+        // --- SAVE TO GOOGLE SHEETS ---
+
+        function saveToExcel() {
+            if (isSaving) {
+                console.log("Already saving");
+                return;
+            }
+
+            const data = {
+                name: document.getElementById('input-0').value,
+                category: document.getElementById('input-1').value,
+                unit: document.getElementById('input-2').value,
+                price: document.getElementById('input-3').value,
+                stock: document.getElementById('input-4').value
+            };
+
+            if (!data.name || data.name.trim().length < 1) {
+                alert("❌ Product name is required!");
+                return;
+            }
+
+            // Prevent duplicate submissions
+            isSaving = true;
+            saveBtn.disabled = true;
+            saveBtn.textContent = "⏳ SAVING...";
+            saveBtn.style.backgroundColor = "#ffa502";
+            statusText.textContent = "📤 Sending to Google Sheets...";
+            
+            // Keep mic on but pause processing
+            const wasListening = isListening;
+
+            const scriptURL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec";
+
+            console.log("💾 Saving:", data);
+
+            fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                console.log("✅ Save successful");
+                finishSave(data, wasListening);
+            })
+            .catch(error => {
+                console.error('❌ Save error:', error);
+                alert("⚠️ Error saving! Check your connection and try again.");
+                isSaving = false;
+                saveBtn.disabled = false;
+                saveBtn.textContent = "💾 SAVE ITEM";
+                saveBtn.style.backgroundColor = "";
+                updateStatus();
+            });
+
+            // Backup timeout in case no-cors doesn't respond
+            setTimeout(() => {
+                if (isSaving) {
+                    console.log("⏱️ Timeout - assuming save succeeded");
+                    finishSave(data, wasListening);
+                }
+            }, 3000);
+        }
+
+        function finishSave(data, wasListening) {
+            if (!isSaving) return;
+            
+            transcriptEl.textContent = `✅ SAVED: ${data.name}`;
+            
+            // Reset form
+            clearForm();
+            
+            // Reset button
+            saveBtn.textContent = "💾 SAVE ITEM";
+            saveBtn.style.backgroundColor = "";
+            saveBtn.disabled = false;
+            
+            // Reset to first field
+            activeIndex = 0;
+            highlightField(0);
+            
+            setTimeout(() => {
+                isSaving = false;
+                transcriptEl.textContent = "—";
+                if (wasListening) {
+                    updateStatus();
+                }
+            }, 2000);
+        }
+
+        function clearForm() {
+            for (let i = 0; i < totalFields; i++) {
+                document.getElementById(`input-${i}`).value = '';
+                document.getElementById(`group-${i}`).classList.remove('locked', 'active', 'correction');
+            }
+            activeIndex = 0;
+            highlightField(0);
+            console.log("🗑️ Form cleared");
+        }
+
+        // --- ERROR HANDLING ---
+
+        recognition.onstart = () => {
+            console.log("✅ Recognition started successfully");
+        };
+
+        recognition.onend = () => {
+            console.log("⚠️ Recognition ended unexpectedly");
+            
+            // Auto-restart if user still wants to listen
+            if (isListening && !isSaving) {
+                console.log("🔄 Auto-restarting recognition...");
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error("Restart failed:", e);
+                        isListening = false;
+                        micBtn.classList.remove('active');
+                        statusText.textContent = "❌ Mic stopped. Click to restart.";
+                    }
+                }, 100);
+            } else {
+                isListening = false;
+                micBtn.classList.remove('active');
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("❌ Speech error:", event.error);
+            
+            if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                isListening = false;
+                micBtn.classList.remove('active');
+                statusText.textContent = "🚫 Microphone permission denied";
+                alert("⚠️ Please allow microphone access in your browser settings.");
+            } else if (event.error === 'no-speech') {
+                console.log("No speech detected - continuing...");
+                // Don't stop, just keep listening
+            } else if (event.error === 'network') {
+                statusText.textContent = "📡 Network error - check internet connection";
+            } else if (event.error === 'aborted') {
+                console.log("Recognition aborted - this is normal");
+            } else {
+                console.warn("Other error:", event.error);
+            }
+        };
+
+        // Initialize
+        highlightField(0);
+        console.log("🚀 Voice Inventory System Ready!");
+        console.log("💡 Click the microphone ONCE to start - it will stay on!");
+    </script>
+</body>
+</html>
