@@ -3,36 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory (Mobile Fix)</title>
+    <title>Voice Inventory (Stable)</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --highlight: #00d4ff; 
-            --listening: #ff4757; 
-            --success: #2ed573;
-            --correction: #ffa502;
-            --warning: #ff7f50;
+            --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #e0e0e0;
+            --highlight: #00d4ff; --listening: #ff4757; --success: #2ed573;
+            --correction: #ffa502; --warning: #ff7f50;
         }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0; padding: 15px;
-            min-height: 100vh;
-            touch-action: pan-y;
+            font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color);
+            color: var(--text-main); margin: 0; padding: 15px; min-height: 100vh;
         }
-
         .container { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
-        h1 { text-align: center; font-weight: 300; margin: 0 0 10px 0; }
-
+        
+        /* ALERTS */
         #offline-alert {
-            background: var(--warning); color: #121212; padding: 12px; 
-            border-radius: 8px; margin-bottom: 15px; text-align: center; 
+            background: var(--warning); color: #121212; padding: 12px;
+            border-radius: 8px; margin-bottom: 15px; text-align: center;
             font-weight: bold; display: none; cursor: pointer;
         }
 
@@ -41,24 +29,21 @@
             font-weight: bold; text-align: center;
         }
 
+        /* MIC BUTTON */
         .controls { display: flex; justify-content: center; margin-bottom: 20px; }
-
         #mic-btn {
-            width: 80px; height: 80px; border-radius: 50%; border: none; 
-            background-color: #333; color: white; font-size: 2rem; 
-            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+            width: 80px; height: 80px; border-radius: 50%; border: none;
+            background-color: #333; color: white; font-size: 2rem;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             transition: all 0.2s;
         }
         #mic-btn.active { 
             background-color: var(--listening); transform: scale(1.1);
             animation: pulse 1.5s infinite;
         }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 71, 87, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
-        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,71,87,0.7); } 70% { box-shadow: 0 0 0 15px rgba(255,71,87,0); } }
 
+        /* TRANSCRIPT */
         .transcript-box {
             background: var(--card-bg); padding: 10px; border-radius: 8px;
             margin-bottom: 20px; min-height: 50px; border: 1px solid #333;
@@ -67,32 +52,27 @@
         .transcript-text { color: var(--highlight); font-size: 1.1rem; }
         .transcript-text.cmd { color: var(--correction); font-weight: bold; }
 
+        /* INPUTS */
         .grid-container { display: flex; flex-direction: column; gap: 12px; }
-
         .input-group {
-            background: var(--card-bg); padding: 12px 15px;
-            border-radius: 10px; border-left: 5px solid #333; 
-            transition: all 0.2s; position: relative;
+            background: var(--card-bg); padding: 12px 15px; border-radius: 10px;
+            border-left: 5px solid #333; transition: all 0.2s; position: relative;
         }
-        .input-group.active {
-            border-left-color: var(--highlight); background-color: #262626; 
-            transform: translateX(5px);
-        }
-        
+        .input-group.active { border-left-color: var(--highlight); background-color: #262626; transform: translateX(5px); }
         .field-number {
-            position: absolute; top: 10px; right: 10px; background: #333; 
-            color: #888; width: 24px; height: 24px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 0.75rem;
+            position: absolute; top: 10px; right: 10px; background: #333;
+            color: #888; width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
         }
         .input-group.active .field-number { background: var(--highlight); color: #121212; }
-
+        
         label { display: block; color: #888; font-size: 0.75rem; margin-bottom: 5px; text-transform: uppercase; }
         input {
-            width: 100%; background: transparent; border: none; color: white; 
+            width: 100%; background: transparent; border: none; color: white;
             font-size: 1.3rem; font-weight: 600; outline: none;
         }
 
+        /* BUTTONS */
         .button-group { display: flex; gap: 10px; margin-top: 20px; }
         .action-btn {
             flex: 1; padding: 15px; border: none; border-radius: 8px;
@@ -169,23 +149,28 @@
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec"; 
+        // --- CONFIGURATION ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec"; // <--- PASTE URL HERE
 
+        // --- VOICE SETUP ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition ? new SpeechRecognition() : null;
         
+        // --- ELEMENTS ---
         const micBtn = document.getElementById('mic-btn');
         const statusText = document.getElementById('status-text');
         const transcriptEl = document.getElementById('transcript');
         const offlineAlert = document.getElementById('offline-alert');
 
+        // --- VARIABLES ---
         let isListening = false;
         let activeIndex = 0;
         let isSaving = false;
         let commandLock = false; 
-        let silenceTimer = null; // Detects if mic died
+        let silenceTimer = null;
         const totalFields = 5;
 
+        // --- COMMANDS ---
         const CMDS = {
             next: ['next', 'go', 'skip', 'forward'],
             back: ['back', 'return', 'previous'],
@@ -194,8 +179,9 @@
             jump: { 0:['name'], 1:['category'], 2:['unit'], 3:['price'], 4:['stock'] }
         };
 
+        // --- VOICE ENGINE ---
         if (recognition) {
-            recognition.continuous = true; // Still try continuous
+            recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
@@ -203,26 +189,22 @@
                 isListening = true;
                 micBtn.classList.add('active');
                 statusText.textContent = "🎤 Listening...";
-                startSilenceWatchdog();
+                startWatchdog(); // FIX: Android Mic Keep-Alive
             };
 
             recognition.onend = () => {
-                // If we are supposed to be listening, FORCE restart
                 if (isListening && !isSaving) {
-                    console.log("Mic dropped. Restarting...");
-                    try { recognition.start(); } catch(e) {}
+                    try { recognition.start(); } catch(e){}
                 } else {
                     micBtn.classList.remove('active');
                     statusText.textContent = "⏸️ Paused";
-                    stopSilenceWatchdog();
+                    stopWatchdog();
                 }
             };
 
             recognition.onresult = (event) => {
                 if (isSaving || commandLock) return;
-
-                // Reset watchdog since we heard something
-                resetSilenceWatchdog();
+                resetWatchdog(); // Reset timer on sound
 
                 const result = event.results[event.results.length - 1];
                 const text = result[0].transcript.toLowerCase().trim();
@@ -231,56 +213,35 @@
                 transcriptEl.textContent = text;
                 transcriptEl.classList.remove('cmd');
 
+                // FIX: Android Double-Jump Prevention
                 if (isFinal) {
                     if (checkCommands(text)) {
                         transcriptEl.classList.add('cmd');
-                        // Quick restart to clear Android buffer
-                        restartMicStream(); 
+                        restartMic(); // Clear Android buffer
                     } else {
                         handleInput(text);
                     }
                 }
             };
         } else {
-            alert("Please use Chrome Browser.");
+            alert("⚠️ Use Chrome Browser");
         }
 
-        // --- WATCHDOG (FIXES MIC GOING OFF) ---
-        function startSilenceWatchdog() {
-            stopSilenceWatchdog();
-            // If no sound for 6 seconds, restart the mic engine
+        // --- WATCHDOG (ANDROID MIC FIX) ---
+        function startWatchdog() {
+            stopWatchdog();
             silenceTimer = setInterval(() => {
-                if (isListening) {
-                    console.log("Watchdog: Silence detected. Refreshing mic...");
-                    restartMicStream();
-                }
+                if(isListening) { console.log("Watchdog: Refreshing"); restartMic(); }
             }, 6000);
         }
+        function stopWatchdog() { if(silenceTimer) clearInterval(silenceTimer); }
+        function resetWatchdog() { stopWatchdog(); startWatchdog(); }
+        function restartMic() { try{recognition.stop();}catch(e){} }
 
-        function stopSilenceWatchdog() {
-            if (silenceTimer) clearInterval(silenceTimer);
-        }
-
-        function resetSilenceWatchdog() {
-            stopSilenceWatchdog();
-            startSilenceWatchdog();
-        }
-
-        function restartMicStream() {
-            // Briefly stop and start to keep connection fresh on Android
-            try { recognition.stop(); } catch(e){}
-            // onend will handle the restart logic
-        }
-
-        // --- CORE LOGIC ---
+        // --- ACTIONS ---
         function toggleMic() {
-            if (isListening) {
-                isListening = false;
-                recognition.stop();
-            } else {
-                isListening = true;
-                recognition.start();
-            }
+            if (isListening) { isListening = false; recognition.stop(); }
+            else { isListening = true; recognition.start(); }
         }
 
         function checkCommands(text) {
@@ -288,7 +249,6 @@
             if (CMDS.back.some(c => text === c)) { moveField(-1); return true; }
             if (CMDS.save.some(c => text === c)) { saveItem(); return true; }
             if (CMDS.clear.some(c => text.includes(c))) { clearForm(); return true; }
-            
             for (let [idx, triggers] of Object.entries(CMDS.jump)) {
                 if (triggers.some(t => text.includes(t) && text.includes('jump'))) {
                     focusField(parseInt(idx)); return true;
@@ -316,76 +276,52 @@
             setTimeout(() => { commandLock = false; }, 800);
         }
 
-        // --- INPUT & NUMBER FIXES ---
+        // --- INPUT HANDLING (ANDROID NUMBER FIX) ---
         function handleInput(text) {
             const input = document.getElementById(`input-${activeIndex}`);
             let clean = text;
-
-            // Strip commands
             CMDS.next.forEach(c => clean = clean.replace(new RegExp(c, 'gi'), ''));
             clean = clean.trim();
-
             if (clean.length === 0) return;
 
-            // Check if it's a number field (Stock or Price)
-            // Note: I changed input types to "text" in HTML to prevent "stuck" rejection
-            // but we still want to parse numbers logically.
             if (activeIndex === 3 || activeIndex === 4) {
                 input.value = parseNumberStrict(clean);
             } else {
                 input.value = clean.charAt(0).toUpperCase() + clean.slice(1);
             }
-            
-            // Flash effect
             input.style.color = 'var(--success)';
             setTimeout(() => input.style.color = 'white', 500);
         }
 
         function parseNumberStrict(text) {
             let str = text.toLowerCase();
+            const map = {
+                'zero':'0','one':'1','won':'1','two':'2','to':'2','three':'3','tree':'3',
+                'four':'4','for':'4','five':'5','six':'6','seven':'7','eight':'8','nine':'9','ten':'10'
+            };
+            // Exact match check first
+            if (map[str]) return map[str];
             
-            // 1. STRICT 1-10 MAP (Fixes "one", "won", "too", "tree")
-            const smallNums = {
-                'zero': '0', 'oh': '0', 'nil': '0',
-                'one': '1', 'won': '1', 'on': '1',
-                'two': '2', 'to': '2', 'too': '2', 'tu': '2',
-                'three': '3', 'tree': '3', 'free': '3',
-                'four': '4', 'for': '4', 'fore': '4',
-                'five': '5', 'hive': '5',
-                'six': '6', 'sex': '6',
-                'seven': '7',
-                'eight': '8', 'ate': '8',
-                'nine': '9', 'nein': '9',
-                'ten': '10'
-            };
-
-            // Check strict exact match first (e.g. user just said "one")
-            if (smallNums[str]) return smallNums[str];
-
-            // 2. Replace words in longer phrases
-            Object.keys(smallNums).forEach(k => {
-                const regex = new RegExp(`\\b${k}\\b`, 'g');
-                str = str.replace(regex, smallNums[k]);
-            });
-
-            // 3. Handle tens (twenty, thirty...)
-            const tens = {
-                'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 
-                'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90',
-                'hundred': '00' // hack for "5 hundred" -> 500
-            };
+            // Replace in string
+            Object.keys(map).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), map[k]));
+            str = str.replace(/-/g, ' '); // Fix twenty-five
+            
+            const tens = {'twenty':'20','thirty':'30','forty':'40','fifty':'50','sixty':'60'};
             Object.keys(tens).forEach(k => str = str.replace(new RegExp(k, 'g'), tens[k]));
-
-            // 4. Clean up non-digits
-            // Allow dots for price, remove everything else
-            let final = str.replace(/[^0-9.]/g, ' ').replace(/\s+/g, '');
             
-            return final;
+            return str.replace(/[^0-9.]/g, ' ').replace(/\s+/g, '');
         }
 
-        // --- SAVE / OFFLINE ---
+        // --- SAVE SYSTEM (THE FIX) ---
         function saveItem() {
             if (isSaving) return;
+
+            // 1. Setup Check
+            if (SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT")) {
+                alert("❌ CONFIG ERROR: You forgot to paste your Google Script URL in the code!");
+                return;
+            }
+
             const data = {
                 name: document.getElementById('input-0').value,
                 category: document.getElementById('input-1').value,
@@ -395,43 +331,68 @@
                 timestamp: new Date().toLocaleTimeString()
             };
 
-            if (!data.name) { alert("Name required!"); return; }
+            if (!data.name) { alert("❌ Product Name required!"); return; }
 
             isSaving = true;
             document.getElementById('save-btn').textContent = "⏳...";
-            
-            if (navigator.onLine) {
-                fetch(SCRIPT_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                })
-                .then(() => finishSave(data, true))
-                .catch(() => saveOffline(data));
-            } else {
+
+            // 2. Network Check
+            if (!navigator.onLine) {
                 saveOffline(data);
+                return;
             }
+
+            // 3. Robust Fetch with Timeout
+            // If fetch takes > 3 seconds, we abort and save offline
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                signal: controller.signal
+            })
+            .then(() => {
+                clearTimeout(timeoutId);
+                finishSave(data, true);
+            })
+            .catch(err => {
+                console.log("Network/Timeout Error:", err);
+                saveOffline(data); // Auto-fallback to offline
+            });
         }
 
         function saveOffline(data) {
-            let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
-            pending.push(data);
-            localStorage.setItem('inv_offline', JSON.stringify(pending));
-            finishSave(data, false);
+            try {
+                let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
+                pending.push(data);
+                localStorage.setItem('inv_offline', JSON.stringify(pending));
+                finishSave(data, false);
+            } catch (e) {
+                alert("❌ Storage Full or Error!");
+                isSaving = false;
+                document.getElementById('save-btn').textContent = "💾 SAVE";
+            }
         }
 
         function finishSave(data, synced) {
+            // UI Update
             const list = document.getElementById('log-list');
             const div = document.createElement('div');
             div.className = `log-item ${synced ? 'log-synced' : 'log-pending'}`;
             div.innerHTML = `<b>${data.name}</b> <span style="color:#888">Qty:${data.stock}</span>`;
             list.insertBefore(div, list.firstChild);
-            
             document.getElementById('log-count').textContent = list.children.length;
+
             updateOfflineUI();
             clearForm();
             isSaving = false;
             document.getElementById('save-btn').textContent = "💾 SAVE";
+            transcriptEl.textContent = synced ? "✅ Saved Online" : "⚠️ Saved Offline";
+            
+            // Go back to start
             focusField(0);
         }
 
@@ -446,21 +407,37 @@
         }
 
         function syncOfflineData() {
-            if (!navigator.onLine) return alert("Offline!");
+            if (!navigator.onLine) return alert("❌ Still Offline");
+            
             let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
-            if(confirm(`Upload ${pending.length} items?`)) {
-                const uploadNext = (i) => {
+            if (pending.length === 0) return;
+
+            if (confirm(`Sync ${pending.length} items?`)) {
+                offlineAlert.textContent = "⏳ Uploading...";
+                
+                // Sequential Upload
+                const uploadLoop = (i) => {
                     if (i >= pending.length) {
                         localStorage.setItem('inv_offline', "[]");
-                        location.reload(); return;
+                        updateOfflineUI();
+                        alert("✅ All Synced!");
+                        location.reload(); // Refresh to clean slate
+                        return;
                     }
+
                     fetch(SCRIPT_URL, {
                         method: 'POST', mode: 'no-cors',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(pending[i])
-                    }).then(() => uploadNext(i+1));
+                    })
+                    .then(() => uploadLoop(i+1))
+                    .catch(() => {
+                        alert("❌ Sync interrupted. Check connection.");
+                        location.reload();
+                    });
                 };
-                uploadNext(0);
+                
+                uploadLoop(0);
             }
         }
 
@@ -469,9 +446,9 @@
             focusField(0);
         }
 
+        // Init
         focusField(0);
         updateOfflineUI();
     </script>
 </body>
 </html>
-
