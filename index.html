@@ -140,6 +140,11 @@
             line-height: 1.3;
         }
 
+        .transcript-text.command {
+            color: var(--correction);
+            font-weight: bold;
+        }
+
         .grid-container {
             display: grid;
             grid-template-columns: 1fr;
@@ -152,7 +157,7 @@
             padding: 15px;
             border-radius: 10px;
             border-left: 5px solid #333; 
-            transition: all 0.3s ease; 
+            transition: all 0.2s ease; 
             position: relative;
             min-height: 75px;
         }
@@ -388,7 +393,6 @@
             .commands-help { font-size: 0.8rem; }
         }
 
-        /* Prevent zoom on input focus (iOS) */
         @media screen and (max-width: 600px) {
             input { font-size: 16px !important; }
         }
@@ -408,7 +412,7 @@
         </div>
 
         <div class="transcript-box">
-            <div class="transcript-label">Listening:</div>
+            <div class="transcript-label">You said:</div>
             <div class="transcript-text" id="transcript">—</div>
         </div>
 
@@ -449,7 +453,6 @@
             </button>
         </div>
 
-        <!-- SAVED ITEMS LOG -->
         <div class="log-section">
             <div class="log-header" onclick="toggleLog()">
                 <span class="log-title">📋 Saved Items</span>
@@ -465,40 +468,32 @@
         <div class="commands-help">
             <h3>🎙️ Voice Commands:</h3>
             • <span class="command">"NEXT"</span> - move forward<br>
-            • <span class="command">"BACK"</span> - go backward<br>
-            • <span class="command">"GO TO [FIELD]"</span> - jump to field<br>
+            • <span class="command">"BACK"</span> - go back<br>
             • <span class="command">"DONE"</span> - save item<br>
-            • Just speak naturally to fill fields<br><br>
-            <strong>💡 Tip:</strong> Speak clearly with brief pauses between words
+            • Just say numbers/text to fill fields<br><br>
+            <strong>💡 Tip:</strong> Say ONLY the data (like "3340"), pause, then say command
         </div>
     </div>
 
     <script>
-        // Browser Support Check
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
-            document.body.innerHTML = '<div class="warning"><h2>⚠️ Voice Not Supported</h2><p>Please use Google Chrome on Android or Desktop.</p></div>' + document.body.innerHTML;
+            document.body.innerHTML = '<div class="warning"><h2>⚠️ Voice Not Supported</h2><p>Please use Google Chrome.</p></div>' + document.body.innerHTML;
             document.getElementById('mic-btn').disabled = true;
         }
 
-        // Initialize Recognition
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
-        recognition.interimResults = true;
+        recognition.interimResults = true; // Show real-time feedback
         recognition.lang = 'en-US';
-        recognition.maxAlternatives = 1;
 
-        // State
         let isListening = false;
         let activeIndex = 0; 
         const totalFields = 5;
         let isSaving = false;
-        let lastFinalTranscript = '';
-        let processingCommand = false;
-        let savedItems = []; // Log storage
+        let savedItems = [];
 
-        // DOM Elements
         const statusText = document.getElementById('status-text');
         const micBtn = document.getElementById('mic-btn');
         const transcriptEl = document.getElementById('transcript');
@@ -507,7 +502,13 @@
         const logContent = document.getElementById('log-content');
         const logItems = document.getElementById('log-items');
 
-        // --- MICROPHONE CONTROL ---
+        // Command detection
+        const COMMANDS = {
+            next: ['next', 'nex', 'neck', 'nets'],
+            back: ['back', 'bac', 'bag', 'previous'],
+            done: ['done', 'don', 'save', 'finish'],
+            goto: ['go to', 'goto', 'change', 'jump to']
+        };
 
         function toggleMic() {
             if (isListening) {
@@ -535,130 +536,146 @@
         }
 
         function stopListening() {
-            try {
-                recognition.stop();
-            } catch(e) {}
-            
+            try { recognition.stop(); } catch(e) {}
             isListening = false;
             micBtn.classList.remove('active');
-            statusText.textContent = "⏸️ Paused. Tap mic to resume.";
+            statusText.textContent = "⏸️ Paused";
         }
 
         function updateStatus() {
             statusText.textContent = `🎤 ${getFieldName(activeIndex)}`;
         }
 
-        // --- VOICE RECOGNITION ---
-
+        // MAIN VOICE HANDLER - INSTANT PROCESSING
         recognition.onresult = (event) => {
-            if (isSaving || processingCommand) return;
+            if (isSaving) return;
 
-            let interimTranscript = '';
-            let finalTranscript = '';
+            const result = event.results[event.results.length - 1];
+            const text = result[0].transcript;
+            const textLower = text.toLowerCase().trim();
+            const isFinal = result.isFinal;
 
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript;
-                } else {
-                    interimTranscript += transcript;
-                }
+            // Show what's heard INSTANTLY
+            transcriptEl.textContent = text;
+
+            // Check for COMMANDS FIRST - even on interim results for faster response
+            const isCommand = checkAndExecuteCommand(textLower, isFinal);
+            
+            if (isCommand) {
+                transcriptEl.classList.add('command');
+                return; // Don't type commands into fields!
             }
 
-            const currentText = finalTranscript || interimTranscript;
-            transcriptEl.textContent = currentText || '—';
+            transcriptEl.classList.remove('command');
 
-            if (finalTranscript && finalTranscript !== lastFinalTranscript) {
-                lastFinalTranscript = finalTranscript;
-                processFinalSpeech(finalTranscript.trim());
+            // Only update input on FINAL results
+            if (isFinal) {
+                // Remove any command words that slipped through
+                let cleanText = removeCommandWords(text);
+                if (cleanText.trim().length > 0) {
+                    updateCurrentInput(cleanText);
+                }
             }
         };
 
-        function processFinalSpeech(text) {
-            if (!text || processingCommand) return;
-            
-            processingCommand = true;
-            const textLower = text.toLowerCase();
-
-            // 1. SAVE
-            if (textLower === "done" || textLower === "save") {
-                saveToExcel();
-                setTimeout(() => { processingCommand = false; }, 500);
-                return;
+        function checkAndExecuteCommand(textLower, isFinal) {
+            // NEXT
+            if (COMMANDS.next.some(cmd => textLower === cmd || textLower.endsWith(cmd))) {
+                if (isFinal) nextField();
+                return true;
             }
 
-            // 2. NEXT
-            if (textLower === "next") {
-                nextField();
-                setTimeout(() => { processingCommand = false; }, 300);
-                return;
+            // BACK
+            if (COMMANDS.back.some(cmd => textLower === cmd || textLower.startsWith(cmd))) {
+                if (isFinal) previousField();
+                return true;
             }
 
-            // 3. BACK
-            if (textLower === "back" || textLower === "previous") {
-                previousField();
-                setTimeout(() => { processingCommand = false; }, 300);
-                return;
+            // DONE
+            if (COMMANDS.done.some(cmd => textLower === cmd || textLower.startsWith(cmd))) {
+                if (isFinal) saveToExcel();
+                return true;
             }
 
-            // 4. JUMP
-            if (textLower.startsWith("go to") || textLower.startsWith("jump to")) {
-                let targetIndex = -1;
-                if (textLower.includes("name")) targetIndex = 0;
-                else if (textLower.includes("category")) targetIndex = 1;
-                else if (textLower.includes("unit")) targetIndex = 2;
-                else if (textLower.includes("price")) targetIndex = 3;
-                else if (textLower.includes("stock")) targetIndex = 4;
+            // GOTO
+            if (COMMANDS.goto.some(cmd => textLower.startsWith(cmd))) {
+                if (isFinal) {
+                    let targetIndex = -1;
+                    if (textLower.includes("name")) targetIndex = 0;
+                    else if (textLower.includes("category")) targetIndex = 1;
+                    else if (textLower.includes("unit")) targetIndex = 2;
+                    else if (textLower.includes("price")) targetIndex = 3;
+                    else if (textLower.includes("stock")) targetIndex = 4;
 
-                if (targetIndex !== -1) {
-                    jumpToField(targetIndex);
-                    setTimeout(() => { processingCommand = false; }, 300);
-                    return;
+                    if (targetIndex !== -1) jumpToField(targetIndex);
                 }
+                return true;
             }
 
-            // 5. DATA ENTRY
-            updateCurrentInput(text);
-            setTimeout(() => { processingCommand = false; }, 200);
+            return false;
         }
 
-        // --- INPUT PROCESSING ---
+        function removeCommandWords(text) {
+            let cleaned = text;
+            const allCommands = [...COMMANDS.next, ...COMMANDS.back, ...COMMANDS.done];
+            
+            allCommands.forEach(cmd => {
+                const regex = new RegExp('\\b' + cmd + '\\b', 'gi');
+                cleaned = cleaned.replace(regex, '');
+            });
+            
+            // Remove "go to" phrases
+            cleaned = cleaned.replace(/go to \w+/gi, '');
+            cleaned = cleaned.replace(/jump to \w+/gi, '');
+            
+            return cleaned.trim();
+        }
 
         function textToNumber(text) {
             const numberWords = {
                 'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
                 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
-                'ten': '10', 'twenty': '20', 'thirty': '30', 'forty': '40', 
-                'fifty': '50', 'hundred': '100', 'thousand': '1000'
+                'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
+                'fourteen': '14', 'fifteen': '15', 'twenty': '20', 'thirty': '30',
+                'forty': '40', 'fifty': '50', 'sixty': '60', 'hundred': '100'
             };
 
             let result = text.toLowerCase();
+            
+            // Handle phrases like "thirty three forty" -> "3340"
             for (let [word, num] of Object.entries(numberWords)) {
                 result = result.replace(new RegExp('\\b' + word + '\\b', 'g'), num);
             }
+            
+            // Remove spaces between digits: "33 40" -> "3340"
+            result = result.replace(/(\d)\s+(\d)/g, '$1$2');
+            
+            // Extract numbers
             result = result.replace(/[^0-9.]/g, '');
+            
             return result || text;
         }
 
         function updateCurrentInput(text) {
             const input = document.getElementById(`input-${activeIndex}`);
-            if (!text) return;
+            if (!text || text.length < 1) return;
 
             let cleanText = text.trim();
 
             if (input.type === 'number') {
-                input.value = textToNumber(cleanText);
+                const converted = textToNumber(cleanText);
+                input.value = converted;
+                console.log(`Number input: "${cleanText}" → "${converted}"`);
             } else if (activeIndex === 0 || activeIndex === 2) {
                 input.value = cleanText.toUpperCase();
             } else {
                 input.value = cleanText;
             }
 
+            // Flash green
             input.style.color = 'var(--success)';
-            setTimeout(() => { input.style.color = 'white'; }, 300);
+            setTimeout(() => { input.style.color = 'white'; }, 400);
         }
-
-        // --- NAVIGATION ---
 
         function nextField() {
             document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
@@ -666,6 +683,8 @@
             activeIndex = (activeIndex + 1) % totalFields;
             highlightField(activeIndex);
             updateStatus();
+            transcriptEl.textContent = '→ NEXT';
+            setTimeout(() => { transcriptEl.textContent = '—'; }, 1000);
         }
 
         function previousField() {
@@ -673,6 +692,8 @@
             activeIndex = (activeIndex - 1 + totalFields) % totalFields;
             highlightField(activeIndex);
             updateStatus();
+            transcriptEl.textContent = '← BACK';
+            setTimeout(() => { transcriptEl.textContent = '—'; }, 1000);
         }
 
         function jumpToField(targetIndex) {
@@ -705,8 +726,6 @@
             return names[index];
         }
 
-        // --- SAVE TO SHEETS ---
-
         function saveToExcel() {
             if (isSaving) return;
 
@@ -729,6 +748,7 @@
             saveBtn.textContent = "⏳ SAVING...";
             saveBtn.style.backgroundColor = "#ffa502";
             statusText.textContent = "📤 Saving...";
+            transcriptEl.textContent = "💾 Saving to sheet...";
 
             const scriptURL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec";
 
@@ -743,7 +763,7 @@
             })
             .catch(error => {
                 console.error('Save error:', error);
-                alert("⚠️ Save failed! Check connection.");
+                alert("⚠️ Save failed!");
                 isSaving = false;
                 saveBtn.disabled = false;
                 saveBtn.textContent = "💾 SAVE";
@@ -752,13 +772,12 @@
 
             setTimeout(() => {
                 if (isSaving) finishSave(data);
-            }, 3000);
+            }, 2500);
         }
 
         function finishSave(data) {
             if (!isSaving) return;
             
-            // Add to log
             savedItems.unshift(data);
             updateLog();
             
@@ -787,8 +806,6 @@
             }
         }
 
-        // --- LOG FUNCTIONS ---
-
         function toggleLog() {
             logContent.classList.toggle('open');
         }
@@ -812,8 +829,6 @@
             `).join('');
         }
 
-        // --- ERROR HANDLING ---
-
         recognition.onend = () => {
             if (isListening && !isSaving) {
                 setTimeout(() => {
@@ -822,29 +837,21 @@
                     } catch (e) {
                         isListening = false;
                         micBtn.classList.remove('active');
-                        statusText.textContent = "❌ Mic stopped. Tap to restart.";
                     }
                 }, 100);
-            } else {
-                isListening = false;
-                micBtn.classList.remove('active');
             }
         };
 
         recognition.onerror = (event) => {
+            console.error("Error:", event.error);
             if (event.error === 'not-allowed') {
                 isListening = false;
                 micBtn.classList.remove('active');
-                statusText.textContent = "🚫 Mic permission denied";
-                alert("⚠️ Allow microphone access in browser settings.");
-            } else if (event.error === 'no-speech') {
-                // Continue listening
-            } else if (event.error === 'network') {
-                statusText.textContent = "📡 Network error";
+                statusText.textContent = "🚫 Mic blocked";
+                alert("⚠️ Allow microphone access");
             }
         };
 
-        // Initialize
         highlightField(0);
     </script>
 </body>
