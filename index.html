@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory - Fast Mode</title>
+    <title>Voice Inventory - Balanced</title>
     <style>
         :root {
             --bg: #0a0a0a;
@@ -13,6 +13,7 @@
             --dim: #666666;
             --red: #ff3366;
             --yellow: #ffaa00;
+            --blue: #00aaff;
         }
 
         * { 
@@ -67,11 +68,23 @@
             border-radius: 16px;
             border: 2px solid transparent;
             transition: all 0.2s;
+            position: relative;
         }
 
         .mic-control.listening {
             border-color: var(--accent);
             background: linear-gradient(135deg, #1a1a1a 0%, #1a2a1a 100%);
+        }
+
+        .auto-advance-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent);
+            width: 0;
+            transition: width 0.1s linear;
+            border-radius: 0 0 16px 16px;
         }
 
         #mic-btn {
@@ -118,12 +131,41 @@
             text-overflow: ellipsis;
         }
 
-        /* QUICK FORM */
+        .mic-text.command {
+            color: var(--yellow);
+        }
+
+        /* QUICK NAVIGATION */
+        .quick-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--card);
+            border: 1px solid #333;
+            color: var(--text);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-btn:active {
+            background: #2a2a2a;
+            transform: scale(0.97);
+        }
+
+        /* FORM */
         .quick-form {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .field {
@@ -142,8 +184,18 @@
         }
 
         .field.filled {
-            border-left-color: var(--accent);
-            opacity: 0.6;
+            border-left-color: var(--blue);
+        }
+
+        .field.error {
+            border-left-color: var(--red);
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(3px); }
+            25% { transform: translateX(0); }
+            75% { transform: translateX(6px); }
         }
 
         .field-label {
@@ -176,12 +228,12 @@
             opacity: 0.5;
         }
 
-        /* QUICK ACTIONS */
+        /* ACTIONS */
         .actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .btn {
@@ -208,6 +260,11 @@
             transform: scale(0.98);
         }
 
+        .btn-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .btn-secondary {
             background: var(--card);
             color: var(--text);
@@ -219,7 +276,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .stat {
@@ -247,6 +304,7 @@
             background: var(--card);
             border-radius: 12px;
             overflow: hidden;
+            margin-bottom: 15px;
         }
 
         .log-header {
@@ -306,7 +364,6 @@
             background: var(--card);
             padding: 15px;
             border-radius: 12px;
-            margin-top: 20px;
             border-left: 3px solid var(--accent);
         }
 
@@ -328,20 +385,73 @@
             color: var(--accent);
         }
 
-        /* MOBILE */
+        .tips .cmd {
+            color: var(--yellow);
+            font-weight: 700;
+        }
+
+        /* TOGGLE SWITCH */
+        .setting {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: var(--card);
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .setting-desc {
+            font-size: 0.75rem;
+            color: var(--dim);
+            margin-top: 3px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: #333;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .toggle.on {
+            background: var(--accent);
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle.on .toggle-knob {
+            left: 25px;
+        }
+
         @media (max-width: 600px) {
             body { padding: 10px; }
             h1 { font-size: 1.3rem; }
             .timer { font-size: 1.5rem; }
-            #mic-btn { width: 55px; height: 55px; font-size: 1.5rem; }
-            .field-input { font-size: 1.1rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚡ Fast Inventory</h1>
+            <h1>🎤 Voice Inventory</h1>
             <div class="timer" id="timer">00:00</div>
         </div>
 
@@ -351,6 +461,13 @@
                 <div class="mic-status" id="mic-status">READY</div>
                 <div class="mic-text" id="mic-text">Tap mic to start</div>
             </div>
+            <div class="auto-advance-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="quick-nav">
+            <button class="nav-btn" onclick="goBack()">⬅️ BACK</button>
+            <button class="nav-btn" onclick="goNext()">NEXT ➡️</button>
+            <button class="nav-btn" onclick="skipField()">SKIP ⏭️</button>
         </div>
 
         <div class="quick-form">
@@ -391,12 +508,22 @@
             </div>
         </div>
 
+        <div class="setting">
+            <div>
+                <div class="setting-label">Auto-Advance</div>
+                <div class="setting-desc">Move to next field after 3 seconds</div>
+            </div>
+            <div class="toggle" id="auto-toggle" onclick="toggleAuto()">
+                <div class="toggle-knob"></div>
+            </div>
+        </div>
+
         <div class="actions">
             <button class="btn btn-save" id="save-btn" onclick="saveItem()">
                 💾 SAVE (or say "DONE")
             </button>
             <button class="btn btn-secondary" onclick="clearForm()">🗑️ Clear</button>
-            <button class="btn btn-secondary" onclick="skipField()">⏭️ Skip</button>
+            <button class="btn btn-secondary" onclick="repeatLast()">🔄 Repeat</button>
         </div>
 
         <div class="stats">
@@ -425,13 +552,14 @@
         </div>
 
         <div class="tips">
-            <h3>⚡ Speed Tips</h3>
+            <h3>⚡ Commands</h3>
             <ul>
-                <li>Just speak each field - auto-advances after 1.5 seconds</li>
-                <li>Say "SKIP" to leave field empty</li>
-                <li>Say "DONE" to save instantly</li>
-                <li>Say numbers naturally: "twenty-five" or "3340"</li>
-                <li>Goal: Complete in under 20 seconds!</li>
+                <li><span class="cmd">NEXT</span> - move forward</li>
+                <li><span class="cmd">BACK</span> - go to previous field (fix mistakes!)</li>
+                <li><span class="cmd">SKIP</span> - leave field empty</li>
+                <li><span class="cmd">DONE</span> - save item to sheet</li>
+                <li><span class="cmd">CLEAR</span> - clear all fields</li>
+                <li>Enable Auto-Advance for speed (optional)</li>
             </ul>
         </div>
     </div>
@@ -453,9 +581,12 @@
         let isSaving = false;
         let savedItems = [];
         let autoAdvanceTimer = null;
+        let autoAdvanceEnabled = false;
         let sessionTimes = [];
         let startTime = null;
         let timerInterval = null;
+        let lastCommandTime = 0;
+        let progressInterval = null;
 
         const micBtn = document.getElementById('mic-btn');
         const micControl = document.getElementById('mic-control');
@@ -463,6 +594,8 @@
         const micText = document.getElementById('mic-text');
         const saveBtn = document.getElementById('save-btn');
         const timerEl = document.getElementById('timer');
+        const progressBar = document.getElementById('progress-bar');
+        const autoToggle = document.getElementById('auto-toggle');
 
         // LOAD DATA
         function loadData() {
@@ -471,6 +604,22 @@
                 savedItems = JSON.parse(stored);
                 updateLog();
                 updateStats();
+            }
+
+            const autoSetting = localStorage.getItem('autoAdvance');
+            if (autoSetting === 'true') {
+                autoAdvanceEnabled = true;
+                autoToggle.classList.add('on');
+            }
+        }
+
+        function toggleAuto() {
+            autoAdvanceEnabled = !autoAdvanceEnabled;
+            autoToggle.classList.toggle('on');
+            localStorage.setItem('autoAdvance', autoAdvanceEnabled);
+            
+            if (!autoAdvanceEnabled) {
+                clearAutoAdvance();
             }
         }
 
@@ -491,8 +640,11 @@
                 timerInterval = null;
             }
             const elapsed = startTime ? Date.now() - startTime : 0;
-            timerEl.textContent = '00:00';
             return elapsed;
+        }
+
+        function resetTimer() {
+            timerEl.textContent = '00:00';
         }
 
         // MIC CONTROL
@@ -527,7 +679,46 @@
             micBtn.classList.remove('active');
             micControl.classList.remove('listening');
             micStatus.textContent = 'PAUSED';
+            clearAutoAdvance();
             stopTimer();
+        }
+
+        // AUTO-ADVANCE
+        function startAutoAdvance() {
+            if (!autoAdvanceEnabled) return;
+            
+            clearAutoAdvance();
+            
+            const duration = 3000; // 3 seconds
+            const startTime = Date.now();
+            
+            progressInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearAutoAdvance();
+                }
+            }, 50);
+            
+            autoAdvanceTimer = setTimeout(() => {
+                if (activeIndex < 4) {
+                    goNext();
+                }
+            }, duration);
+        }
+
+        function clearAutoAdvance() {
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            progressBar.style.width = '0';
         }
 
         // NUMBER PARSING
@@ -544,22 +735,18 @@
 
             let str = text.toLowerCase().trim();
             
-            // Direct match
             if (words[str] !== undefined) return String(words[str]);
 
-            // Replace words
             Object.keys(words).forEach(word => {
                 str = str.replace(new RegExp(`\\b${word}\\b`, 'g'), String(words[word]));
             });
 
-            // Handle "20 5" -> "25"
             const nums = str.match(/\d+/g);
             if (nums && nums.length === 2) {
                 const [a, b] = nums.map(Number);
                 if (a >= 20 && a <= 90 && b <= 9) return String(a + b);
             }
 
-            // Combine multi-digit
             if (nums && nums.length > 1) {
                 let total = 0;
                 let current = 0;
@@ -578,7 +765,6 @@
                 return String(total);
             }
 
-            // Extract numbers
             str = str.replace(/[^0-9.]/g, '');
             return str || text;
         }
@@ -592,43 +778,65 @@
             const textLower = text.toLowerCase().trim();
             const isFinal = result.isFinal;
 
-            // Show interim
+            // Show what's heard
             micText.textContent = text;
+            micText.classList.remove('command');
 
-            // Clear auto-advance on new speech
-            if (autoAdvanceTimer) {
-                clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = null;
-            }
+            // Clear auto-advance when user speaks
+            clearAutoAdvance();
 
             if (isFinal) {
-                // Commands
+                const now = Date.now();
+                
+                // Debounce
+                if (now - lastCommandTime < 500) {
+                    console.log("Debounced");
+                    return;
+                }
+
+                // COMMANDS
+                if (textLower === 'next' || textLower === 'nex') {
+                    lastCommandTime = now;
+                    goNext();
+                    micText.classList.add('command');
+                    return;
+                }
+
+                if (textLower === 'back' || textLower === 'previous') {
+                    lastCommandTime = now;
+                    goBack();
+                    micText.classList.add('command');
+                    return;
+                }
+
+                if (textLower === 'skip') {
+                    lastCommandTime = now;
+                    skipField();
+                    micText.classList.add('command');
+                    return;
+                }
+
                 if (textLower === 'done' || textLower === 'save') {
+                    lastCommandTime = now;
                     saveItem();
+                    micText.classList.add('command');
                     return;
                 }
 
-                if (textLower === 'skip' || textLower === 'next') {
-                    nextField();
+                if (textLower === 'clear' || textLower === 'clear form') {
+                    lastCommandTime = now;
+                    clearForm();
+                    micText.classList.add('command');
                     return;
                 }
 
-                if (textLower === 'back') {
-                    previousField();
-                    return;
-                }
-
-                // Input
+                // INPUT
                 updateField(text);
                 
-                // Auto-advance after 1.5 seconds of silence
-                autoAdvanceTimer = setTimeout(() => {
-                    if (activeIndex < 4) {
-                        nextField();
-                    } else {
-                        saveItem();
-                    }
-                }, 1500);
+                // Start auto-advance if enabled
+                if (autoAdvanceEnabled) {
+                    startAutoAdvance();
+                }
             }
         };
 
@@ -636,26 +844,28 @@
             const input = document.getElementById(`input-${activeIndex}`);
             let value = text.trim();
 
-            // Number fields (price, stock)
+            // Number fields
             if (activeIndex === 3 || activeIndex === 4) {
                 value = parseNumber(value);
             } else if (activeIndex === 0 || activeIndex === 2) {
-                // Name and Unit uppercase
                 value = value.toUpperCase();
             }
 
             input.value = value;
             document.getElementById(`field-${activeIndex}`).classList.add('filled');
+            document.getElementById(`field-${activeIndex}`).classList.remove('error');
         }
 
-        function nextField() {
+        function goNext() {
+            clearAutoAdvance();
             if (activeIndex < 4) {
                 activeIndex++;
                 highlightField(activeIndex);
             }
         }
 
-        function previousField() {
+        function goBack() {
+            clearAutoAdvance();
             if (activeIndex > 0) {
                 activeIndex--;
                 highlightField(activeIndex);
@@ -663,10 +873,10 @@
         }
 
         function skipField() {
+            clearAutoAdvance();
             if (activeIndex < 4) {
-                nextField();
-            } else {
-                saveItem();
+                activeIndex++;
+                highlightField(activeIndex);
             }
         }
 
@@ -676,12 +886,32 @@
             document.getElementById(`field-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             const fieldNames = ['Product Name', 'Category', 'Unit', 'Price', 'Stock'];
-            micText.textContent = `Say ${fieldNames[index]}...`;
+            if (isListening) {
+                micText.textContent = `Say ${fieldNames[index]}...`;
+            }
+        }
+
+        function repeatLast() {
+            if (savedItems.length === 0) return;
+            
+            const last = savedItems[0];
+            document.getElementById('input-0').value = last.name;
+            document.getElementById('input-1').value = last.category;
+            document.getElementById('input-2').value = last.unit;
+            
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`field-${i}`).classList.add('filled');
+            }
+            
+            activeIndex = 3;
+            highlightField(3);
         }
 
         // SAVE
         function saveItem() {
             if (isSaving) return;
+
+            clearAutoAdvance();
 
             const data = {
                 name: document.getElementById('input-0').value,
@@ -695,11 +925,15 @@
 
             if (!data.name) {
                 alert("❌ Product name required!");
+                document.getElementById('field-0').classList.add('error');
+                activeIndex = 0;
+                highlightField(0);
                 startTimer();
                 return;
             }
 
             isSaving = true;
+            saveBtn.disabled = true;
             saveBtn.textContent = "⏳ Saving...";
             micText.textContent = "Saving to sheet...";
 
@@ -711,7 +945,7 @@
             updateStats();
 
             // Send to Google Sheets
-            const scriptURL = "https://script.google.com/macros/s/AKfycbz6MKoHA1QNgDCfj42nMJgR7Ix42EuJH6vhxwa14oNUYlkJpOrXFxfa12P8VP38SJL0/exec";
+            const scriptURL = " URL_HERE ";
             fetch(scriptURL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -727,15 +961,19 @@
         function finishSave(data) {
             if (!isSaving) return;
             isSaving = false;
+            saveBtn.disabled = false;
 
             const seconds = (data.time / 1000).toFixed(1);
             micText.textContent = `✅ Saved in ${seconds}s!`;
             saveBtn.textContent = "💾 SAVE";
 
             clearForm();
+            resetTimer();
             
             setTimeout(() => {
-                if (!isListening) {
+                if (isListening) {
+                    micText.textContent = "Say Product Name...";
+                } else {
                     micText.textContent = "Tap mic to continue";
                 }
             }, 2000);
@@ -744,10 +982,11 @@
         function clearForm() {
             for (let i = 0; i < 5; i++) {
                 document.getElementById(`input-${i}`).value = '';
-                document.getElementById(`field-${i}`).classList.remove('filled');
+                document.getElementById(`field-${i}`).classList.remove('filled', 'error');
             }
             activeIndex = 0;
             highlightField(0);
+            clearAutoAdvance();
         }
 
         function toggleLog() {
@@ -809,6 +1048,7 @@
                 alert("⚠️ Please allow microphone access");
                 isListening = false;
                 micBtn.classList.remove('active');
+                micControl.classList.remove('listening');
             }
         };
 
