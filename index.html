@@ -438,52 +438,135 @@
             const text = result[0].transcript.trim();
             const lower = text.toLowerCase();
             const isFinal = result.isFinal;
-
-            // Show what's heard
+            
+            // Always show what's being heard (for user feedback)
             transcript.textContent = text;
-
+            
             if (isFinal) {
                 const now = Date.now();
-
-                // Prevent duplicate commands
-                if (lower === lastCommand && now - lastCommandTime < 800) {
-                    console.log('Duplicate command blocked');
+                const timeSinceLastCommand = now - lastCommandTime;
+                
+                // CRITICAL FIX 1: Ignore results that come too quickly after a command
+                // This prevents the "echo" effect where the same command gets processed twice
+                if (timeSinceLastCommand < 500) {
+                    console.log('Ignoring post-command speech fragment');
                     return;
                 }
-
-                // Check for commands
-                if (lower === 'next' || lower === 'nex') {
-                    lastCommand = lower;
-                    lastCommandTime = now;
-                    nextField();
-                    return;
+                
+                // CRITICAL FIX 2: Better command detection with word boundaries
+                const words = lower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                
+                // Check if the last word is a command (allows "okay next" or "move next")
+                if (lastWord === 'next' || lastWord === 'nex' || lastWord === 'text') {
+                    // Also check if this is mostly a command (not a phrase that happens to end with "next")
+                    if (words.length <= 2 || text.toLowerCase().includes('go next') || text.toLowerCase().includes('move next')) {
+                        lastCommand = text;
+                        lastCommandTime = now;
+                        nextField();
+                        
+                        // CRITICAL FIX 3: Clear the transcript after a command
+                        setTimeout(() => {
+                            if (transcript.textContent === text) {
+                                transcript.textContent = '...';
+                            }
+                        }, 300);
+                        
+                        return;
+                    }
                 }
-
-                if (lower === 'back' || lower === 'previous') {
-                    lastCommand = lower;
+                
+                // CRITICAL FIX 4: More robust back command detection
+                if (lastWord === 'back' || lastWord === 'previous' || 
+                    text.toLowerCase().includes('go back') || 
+                    text.toLowerCase().includes('move back')) {
+                    lastCommand = text;
                     lastCommandTime = now;
                     prevField();
+                    setTimeout(() => {
+                        if (transcript.textContent === text) {
+                            transcript.textContent = '...';
+                        }
+                    }, 300);
                     return;
                 }
-
-                if (lower === 'done' || lower === 'save') {
-                    lastCommand = lower;
-                    lastCommandTime = now;
-                    saveData();
-                    return;
-                }
-
-                if (lower === 'clear' || lower === 'clear all') {
-                    lastCommand = lower;
+                
+                // CRITICAL FIX 5: Clear detection
+                if (lower.includes('clear') && (lower.includes('all') || words.length === 1)) {
+                    lastCommand = text;
                     lastCommandTime = now;
                     clearAll();
+                    setTimeout(() => {
+                        if (transcript.textContent === text) {
+                            transcript.textContent = '...';
+                        }
+                    }, 300);
                     return;
                 }
-
-                // Not a command - input data
+                
+                // CRITICAL FIX 6: Save detection
+                if (lastWord === 'save' || lastWord === 'done' || 
+                    text.toLowerCase().includes('save it') || 
+                    text.toLowerCase().includes('all done')) {
+                    lastCommand = text;
+                    lastCommandTime = now;
+                    saveData();
+                    setTimeout(() => {
+                        if (transcript.textContent === text) {
+                            transcript.textContent = '...';
+                        }
+                    }, 300);
+                    return;
+                }
+                
+                // If we get here, it's not a command - fill the current field
+                // BUT FIRST: Check if this looks like it might have been a failed command
+                if (text.length < 10 && !/\d/.test(text)) {
+                    // Short text without numbers might be a misheard command
+                    const possibleCommands = ['next', 'back', 'clear', 'save', 'done'];
+                    const similarity = possibleCommands.some(cmd => 
+                        levenshteinDistance(lower, cmd) <= 2
+                    );
+                    
+                    if (similarity) {
+                        console.log('Ignoring possible misheard command:', text);
+                        transcript.textContent = '...';
+                        return;
+                    }
+                }
+                
+                // Actually fill the field
                 fillField(text);
             }
         };
+
+        function levenshteinDistance(a, b) {
+            const matrix = [];
+            
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+            
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+            
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            
+            return matrix[b.length][a.length];
+        }
 
         // FILL FIELD
         function fillField(text) {
@@ -709,4 +792,3 @@
     </script>
 </body>
 </html>
-
