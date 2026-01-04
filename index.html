@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory (Android Fix)</title>
+    <title>Voice Inventory (Mobile Fix)</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -28,15 +28,12 @@
         }
 
         .container { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
-
         h1 { text-align: center; font-weight: 300; margin: 0 0 10px 0; }
 
-        /* OFFLINE BANNER */
         #offline-alert {
-            background: var(--warning); color: #121212;
-            padding: 12px; border-radius: 8px; margin-bottom: 15px;
-            text-align: center; font-weight: bold; display: none;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: var(--warning); color: #121212; padding: 12px; 
+            border-radius: 8px; margin-bottom: 15px; text-align: center; 
+            font-weight: bold; display: none; cursor: pointer;
         }
 
         #status-text { 
@@ -44,21 +41,17 @@
             font-weight: bold; text-align: center;
         }
 
-        .controls {
-            display: flex; justify-content: center; margin-bottom: 20px;
-        }
+        .controls { display: flex; justify-content: center; margin-bottom: 20px; }
 
         #mic-btn {
-            width: 80px; height: 80px; border-radius: 50%;
-            border: none; background-color: #333; color: white;
-            font-size: 2rem; cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 80px; height: 80px; border-radius: 50%; border: none; 
+            background-color: #333; color: white; font-size: 2rem; 
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
             transition: all 0.2s;
         }
         #mic-btn.active { 
-            background-color: var(--listening); 
+            background-color: var(--listening); transform: scale(1.1);
             animation: pulse 1.5s infinite;
-            transform: scale(1.1);
         }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
@@ -69,7 +62,7 @@
         .transcript-box {
             background: var(--card-bg); padding: 10px; border-radius: 8px;
             margin-bottom: 20px; min-height: 50px; border: 1px solid #333;
-            text-align: center;
+            text-align: center; display: flex; align-items: center; justify-content: center;
         }
         .transcript-text { color: var(--highlight); font-size: 1.1rem; }
         .transcript-text.cmd { color: var(--correction); font-weight: bold; }
@@ -82,23 +75,22 @@
             transition: all 0.2s; position: relative;
         }
         .input-group.active {
-            border-left-color: var(--highlight);
-            background-color: #262626; transform: translateX(5px);
+            border-left-color: var(--highlight); background-color: #262626; 
+            transform: translateX(5px);
         }
-        .input-group.locked { opacity: 0.5; pointer-events: none; }
-
+        
         .field-number {
-            position: absolute; top: 10px; right: 10px;
-            background: #333; color: #888; width: 24px; height: 24px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            position: absolute; top: 10px; right: 10px; background: #333; 
+            color: #888; width: 24px; height: 24px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
             font-size: 0.75rem;
         }
         .input-group.active .field-number { background: var(--highlight); color: #121212; }
 
         label { display: block; color: #888; font-size: 0.75rem; margin-bottom: 5px; text-transform: uppercase; }
         input {
-            width: 100%; background: transparent; border: none;
-            color: white; font-size: 1.3rem; font-weight: 600; outline: none;
+            width: 100%; background: transparent; border: none; color: white; 
+            font-size: 1.3rem; font-weight: 600; outline: none;
         }
 
         .button-group { display: flex; gap: 10px; margin-top: 20px; }
@@ -118,7 +110,7 @@
         .log-pending { border-left: 3px solid var(--warning); }
         .log-synced { border-left: 3px solid var(--success); }
 
-        .cmd-list { text-align: center; color: #666; font-size: 0.8rem; margin-top: 20px; line-height: 1.6; }
+        .cmd-list { text-align: center; color: #666; font-size: 0.8rem; margin-top: 20px; }
         .cmd-pill { background: #333; padding: 2px 6px; border-radius: 4px; color: var(--success); }
     </style>
 </head>
@@ -126,11 +118,7 @@
 
     <div class="container">
         <h1>Inventory Voice</h1>
-        
-        <div id="offline-alert" onclick="syncOfflineData()">
-            ⚠️ <span id="pending-count">0</span> items waiting. Tap to Sync.
-        </div>
-
+        <div id="offline-alert" onclick="syncOfflineData()">⚠️ Items waiting. Tap to Sync.</div>
         <div id="status-text">Tap mic to start</div>
 
         <div class="controls">
@@ -143,34 +131,29 @@
 
         <div class="grid-container">
             <div class="input-group" id="group-0" onclick="focusField(0)">
-                <span class="field-number">1</span>
-                <label>Product Name</label>
+                <span class="field-number">1</span><label>Product Name</label>
                 <input type="text" id="input-0" placeholder="Say name...">
             </div>
             <div class="input-group" id="group-1" onclick="focusField(1)">
-                <span class="field-number">2</span>
-                <label>Category</label>
+                <span class="field-number">2</span><label>Category</label>
                 <input type="text" id="input-1" placeholder="Say category...">
             </div>
             <div class="input-group" id="group-2" onclick="focusField(2)">
-                <span class="field-number">3</span>
-                <label>Unit</label>
+                <span class="field-number">3</span><label>Unit</label>
                 <input type="text" id="input-2" placeholder="pcs, box, kg...">
             </div>
             <div class="input-group" id="group-3" onclick="focusField(3)">
-                <span class="field-number">4</span>
-                <label>Price</label>
-                <input type="number" id="input-3" placeholder="0.00">
+                <span class="field-number">4</span><label>Price</label>
+                <input type="text" inputmode="decimal" id="input-3" placeholder="0.00">
             </div>
             <div class="input-group" id="group-4" onclick="focusField(4)">
-                <span class="field-number">5</span>
-                <label>Stock Qty</label>
-                <input type="number" id="input-4" placeholder="0">
+                <span class="field-number">5</span><label>Stock Qty</label>
+                <input type="text" inputmode="numeric" id="input-4" placeholder="0">
             </div>
         </div>
 
         <div class="button-group">
-            <button class="action-btn save-btn" id="save-btn" onclick="saveItem()">💾 SAVE (Say "Done")</button>
+            <button class="action-btn save-btn" id="save-btn" onclick="saveItem()">💾 SAVE</button>
             <button class="action-btn clear-btn" onclick="clearForm()">🗑️ CLEAR</button>
         </div>
 
@@ -179,145 +162,144 @@
                 <span>📋 History</span>
                 <span style="background:var(--success); color:#000; padding:2px 8px; border-radius:10px; font-size:0.8rem" id="log-count">0</span>
             </div>
-            <div class="log-content" id="log-content">
-                <div id="log-list"></div>
-            </div>
+            <div class="log-content" id="log-content"><div id="log-list"></div></div>
         </div>
 
-        <div class="cmd-list">
-            Commands: <span class="cmd-pill">NEXT</span> <span class="cmd-pill">BACK</span> <span class="cmd-pill">DONE</span><br>
-            Or say "Jump to Price", "Jump to Stock"
-        </div>
+        <div class="cmd-list">Commands: <span class="cmd-pill">NEXT</span> <span class="cmd-pill">BACK</span> <span class="cmd-pill">DONE</span></div>
     </div>
 
     <script>
-        // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec";
+        const SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
 
-        // --- SETUP ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition ? new SpeechRecognition() : null;
         
-        // DOM Elements
         const micBtn = document.getElementById('mic-btn');
         const statusText = document.getElementById('status-text');
         const transcriptEl = document.getElementById('transcript');
         const offlineAlert = document.getElementById('offline-alert');
 
-        // State
         let isListening = false;
         let activeIndex = 0;
         let isSaving = false;
         let commandLock = false; 
+        let silenceTimer = null; // Detects if mic died
         const totalFields = 5;
 
-        // --- COMMANDS ---
         const CMDS = {
             next: ['next', 'go', 'skip', 'forward'],
-            back: ['back', 'return', 'previous', 'rear'],
+            back: ['back', 'return', 'previous'],
             save: ['done', 'save', 'finish', 'submit'],
-            clear: ['clear form', 'reset form', 'delete all'],
-            jump: {
-                0: ['name', 'product'], 1: ['category', 'type'], 
-                2: ['unit', 'measure'], 3: ['price', 'cost'], 4: ['stock', 'qty', 'quantity']
-            }
+            clear: ['clear form', 'delete all'],
+            jump: { 0:['name'], 1:['category'], 2:['unit'], 3:['price'], 4:['stock'] }
         };
 
         if (recognition) {
-            recognition.continuous = true;
-            recognition.interimResults = true; 
+            recognition.continuous = true; // Still try continuous
+            recognition.interimResults = true;
             recognition.lang = 'en-US';
 
             recognition.onstart = () => {
                 isListening = true;
                 micBtn.classList.add('active');
                 statusText.textContent = "🎤 Listening...";
+                startSilenceWatchdog();
             };
 
             recognition.onend = () => {
-                if (isListening && !isSaving && !commandLock) {
-                    recognition.start();
-                } else if (!isListening) {
+                // If we are supposed to be listening, FORCE restart
+                if (isListening && !isSaving) {
+                    console.log("Mic dropped. Restarting...");
+                    try { recognition.start(); } catch(e) {}
+                } else {
                     micBtn.classList.remove('active');
                     statusText.textContent = "⏸️ Paused";
+                    stopSilenceWatchdog();
                 }
             };
 
             recognition.onresult = (event) => {
                 if (isSaving || commandLock) return;
 
+                // Reset watchdog since we heard something
+                resetSilenceWatchdog();
+
                 const result = event.results[event.results.length - 1];
                 const text = result[0].transcript.toLowerCase().trim();
                 const isFinal = result.isFinal;
 
-                // Visual only
                 transcriptEl.textContent = text;
                 transcriptEl.classList.remove('cmd');
 
-                // ONLY process on Final results
                 if (isFinal) {
                     if (checkCommands(text)) {
                         transcriptEl.classList.add('cmd');
-                        // Reset recognition on Android to clear buffer
-                        restartRecognition();
+                        // Quick restart to clear Android buffer
+                        restartMicStream(); 
                     } else {
                         handleInput(text);
                     }
                 }
             };
         } else {
-            alert("Use Chrome browser.");
+            alert("Please use Chrome Browser.");
         }
 
-        // --- LOGIC ---
+        // --- WATCHDOG (FIXES MIC GOING OFF) ---
+        function startSilenceWatchdog() {
+            stopSilenceWatchdog();
+            // If no sound for 6 seconds, restart the mic engine
+            silenceTimer = setInterval(() => {
+                if (isListening) {
+                    console.log("Watchdog: Silence detected. Refreshing mic...");
+                    restartMicStream();
+                }
+            }, 6000);
+        }
 
+        function stopSilenceWatchdog() {
+            if (silenceTimer) clearInterval(silenceTimer);
+        }
+
+        function resetSilenceWatchdog() {
+            stopSilenceWatchdog();
+            startSilenceWatchdog();
+        }
+
+        function restartMicStream() {
+            // Briefly stop and start to keep connection fresh on Android
+            try { recognition.stop(); } catch(e){}
+            // onend will handle the restart logic
+        }
+
+        // --- CORE LOGIC ---
         function toggleMic() {
-            if (isListening) { isListening = false; recognition.stop(); }
-            else { recognition.start(); }
-        }
-
-        function restartRecognition() {
-            // This fixes the Android "Ghosting" issue by resetting the stream
-            if(isListening) {
+            if (isListening) {
+                isListening = false;
                 recognition.stop();
-                // onend will restart it automatically
+            } else {
+                isListening = true;
+                recognition.start();
             }
         }
 
         function checkCommands(text) {
-            // NEXT
-            if (CMDS.next.some(c => text === c || text.endsWith(" " + c))) {
-                moveField(1);
-                return true;
-            }
-            // BACK
-            if (CMDS.back.some(c => text === c)) {
-                moveField(-1);
-                return true;
-            }
-            // SAVE
-            if (CMDS.save.some(c => text === c)) {
-                saveItem();
-                return true;
-            }
-            // JUMPS
+            if (CMDS.next.some(c => text === c || text.endsWith(" "+c))) { moveField(1); return true; }
+            if (CMDS.back.some(c => text === c)) { moveField(-1); return true; }
+            if (CMDS.save.some(c => text === c)) { saveItem(); return true; }
+            if (CMDS.clear.some(c => text.includes(c))) { clearForm(); return true; }
+            
             for (let [idx, triggers] of Object.entries(CMDS.jump)) {
-                if (triggers.some(t => text.includes(t) && (text.includes('jump') || text.includes('go')))) {
-                    focusField(parseInt(idx));
-                    return true;
+                if (triggers.some(t => text.includes(t) && text.includes('jump'))) {
+                    focusField(parseInt(idx)); return true;
                 }
-            }
-            // CLEAR
-            if (CMDS.clear.some(c => text.includes(c))) {
-                clearForm();
-                return true;
             }
             return false;
         }
 
-        function moveField(direction) {
+        function moveField(dir) {
             activateLock();
-            activeIndex = (activeIndex + direction + totalFields) % totalFields;
+            activeIndex = (activeIndex + dir + totalFields) % totalFields;
             focusField(activeIndex);
         }
 
@@ -331,15 +313,10 @@
 
         function activateLock() {
             commandLock = true;
-            statusText.textContent = "🔒 Processing...";
-            // 1 second lock prevents double-jumps
-            setTimeout(() => {
-                commandLock = false;
-                statusText.textContent = "🎤 Listening...";
-            }, 1000); 
+            setTimeout(() => { commandLock = false; }, 800);
         }
 
-        // --- INPUT HANDLING (CRITICAL FIXES HERE) ---
+        // --- INPUT & NUMBER FIXES ---
         function handleInput(text) {
             const input = document.getElementById(`input-${activeIndex}`);
             let clean = text;
@@ -348,42 +325,67 @@
             CMDS.next.forEach(c => clean = clean.replace(new RegExp(c, 'gi'), ''));
             clean = clean.trim();
 
-            // FIX: If text is empty (because it was just a command or noise), STOP.
-            // Do NOT overwrite existing data with empty string.
             if (clean.length === 0) return;
 
-            if (input.type === 'number') {
-                input.value = parseNumber(clean);
+            // Check if it's a number field (Stock or Price)
+            // Note: I changed input types to "text" in HTML to prevent "stuck" rejection
+            // but we still want to parse numbers logically.
+            if (activeIndex === 3 || activeIndex === 4) {
+                input.value = parseNumberStrict(clean);
             } else {
                 input.value = clean.charAt(0).toUpperCase() + clean.slice(1);
             }
             
+            // Flash effect
             input.style.color = 'var(--success)';
             setTimeout(() => input.style.color = 'white', 500);
         }
 
-        function parseNumber(text) {
+        function parseNumberStrict(text) {
             let str = text.toLowerCase();
-            const map = { 'to': '2', 'too': '2', 'for': '4', 'tree': '3', 'won': '1', 'one': '1' };
-            Object.keys(map).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), map[k]));
-
-            str = str.replace(/-/g, ' ');
-
-            const nums = {
-                'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'sixty': '60',
-                'ten': '10', 'eleven': '11', 'twelve': '12'
+            
+            // 1. STRICT 1-10 MAP (Fixes "one", "won", "too", "tree")
+            const smallNums = {
+                'zero': '0', 'oh': '0', 'nil': '0',
+                'one': '1', 'won': '1', 'on': '1',
+                'two': '2', 'to': '2', 'too': '2', 'tu': '2',
+                'three': '3', 'tree': '3', 'free': '3',
+                'four': '4', 'for': '4', 'fore': '4',
+                'five': '5', 'hive': '5',
+                'six': '6', 'sex': '6',
+                'seven': '7',
+                'eight': '8', 'ate': '8',
+                'nine': '9', 'nein': '9',
+                'ten': '10'
             };
-            Object.keys(nums).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), nums[k]));
 
-            // If result is empty after parsing, return existing value (safeguard)
-            let result = str.replace(/[^0-9.]/g, ' ').replace(/\s/g, '');
-            return result === "" ? "" : result;
+            // Check strict exact match first (e.g. user just said "one")
+            if (smallNums[str]) return smallNums[str];
+
+            // 2. Replace words in longer phrases
+            Object.keys(smallNums).forEach(k => {
+                const regex = new RegExp(`\\b${k}\\b`, 'g');
+                str = str.replace(regex, smallNums[k]);
+            });
+
+            // 3. Handle tens (twenty, thirty...)
+            const tens = {
+                'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 
+                'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90',
+                'hundred': '00' // hack for "5 hundred" -> 500
+            };
+            Object.keys(tens).forEach(k => str = str.replace(new RegExp(k, 'g'), tens[k]));
+
+            // 4. Clean up non-digits
+            // Allow dots for price, remove everything else
+            let final = str.replace(/[^0-9.]/g, ' ').replace(/\s+/g, '');
+            
+            return final;
         }
 
-        // --- SAVE & OFFLINE ---
+        // --- SAVE / OFFLINE ---
         function saveItem() {
             if (isSaving) return;
-
             const data = {
                 name: document.getElementById('input-0').value,
                 category: document.getElementById('input-1').value,
@@ -405,7 +407,7 @@
                     body: JSON.stringify(data)
                 })
                 .then(() => finishSave(data, true))
-                .catch(() => saveOffline(data)); 
+                .catch(() => saveOffline(data));
             } else {
                 saveOffline(data);
             }
@@ -428,11 +430,8 @@
             document.getElementById('log-count').textContent = list.children.length;
             updateOfflineUI();
             clearForm();
-            
             isSaving = false;
-            document.getElementById('save-btn').textContent = "💾 SAVE (Say 'Done')";
-            transcriptEl.textContent = "✅ Saved";
-            
+            document.getElementById('save-btn').textContent = "💾 SAVE";
             focusField(0);
         }
 
@@ -440,27 +439,24 @@
             let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
             if (pending.length > 0) {
                 offlineAlert.style.display = 'block';
-                document.getElementById('pending-count').textContent = pending.length;
+                offlineAlert.textContent = `⚠️ ${pending.length} items waiting. Tap to Sync.`;
             } else {
                 offlineAlert.style.display = 'none';
             }
         }
 
         function syncOfflineData() {
-            if (!navigator.onLine) return alert("Still offline!");
-            
+            if (!navigator.onLine) return alert("Offline!");
             let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
-            if (confirm(`Sync ${pending.length} items?`)) {
+            if(confirm(`Upload ${pending.length} items?`)) {
                 const uploadNext = (i) => {
                     if (i >= pending.length) {
                         localStorage.setItem('inv_offline', "[]");
-                        updateOfflineUI();
-                        location.reload(); 
-                        return;
+                        location.reload(); return;
                     }
                     fetch(SCRIPT_URL, {
                         method: 'POST', mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(pending[i])
                     }).then(() => uploadNext(i+1));
                 };
