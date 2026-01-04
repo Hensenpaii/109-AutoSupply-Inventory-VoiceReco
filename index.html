@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Inventory System</title>
+    <title>Voice Inventory (Stable)</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -13,720 +13,373 @@
             --listening: #ff4757; 
             --success: #2ed573;
             --correction: #ffa502;
-            --disabled: #666;
+            --warning: #ff7f50;
         }
 
-        * { 
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            margin: 0;
-            padding: 15px;
+            margin: 0; padding: 15px;
             min-height: 100vh;
-            overflow-x: hidden;
             touch-action: pan-y;
         }
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding-bottom: 80px;
-        }
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
 
-        h1 { 
-            font-weight: 300; 
-            letter-spacing: 1px; 
-            margin: 0 0 15px 0;
-            text-align: center;
-            font-size: clamp(1.3rem, 5vw, 2rem);
+        h1 { text-align: center; font-weight: 300; margin: 0 0 10px 0; }
+
+        /* OFFLINE BANNER */
+        #offline-alert {
+            background: var(--warning); color: #121212;
+            padding: 12px; border-radius: 8px; margin-bottom: 15px;
+            text-align: center; font-weight: bold; display: none;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         #status-text { 
-            color: var(--highlight); 
-            min-height: 45px; 
-            margin-bottom: 15px;
-            font-weight: bold;
-            text-align: center;
-            font-size: clamp(0.85rem, 3vw, 1rem);
-            line-height: 1.3;
-            padding: 0 10px;
+            color: var(--highlight); min-height: 25px; margin-bottom: 15px;
+            font-weight: bold; text-align: center;
         }
 
         .controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            display: flex; justify-content: center; margin-bottom: 20px;
         }
 
         #mic-btn {
-            width: 75px; 
-            height: 75px;
-            border-radius: 50%;
-            border: none;
-            background-color: #333;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
+            width: 80px; height: 80px; border-radius: 50%;
+            border: none; background-color: #333; color: white;
+            font-size: 2rem; cursor: pointer;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             transition: all 0.2s;
-            touch-action: manipulation;
         }
         #mic-btn.active { 
             background-color: var(--listening); 
-            transform: scale(1.08);
             animation: pulse 1.5s infinite;
+            transform: scale(1.1);
         }
-        #mic-btn:disabled {
-            background-color: var(--disabled);
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-
         @keyframes pulse {
-            0%, 100% { box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5); }
-            50% { box-shadow: 0 5px 30px rgba(255, 71, 87, 0.8); }
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .nav-btn {
-            padding: 12px 18px;
-            background: #333;
-            border: none;
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            touch-action: manipulation;
-            font-weight: 600;
-        }
-        .nav-btn:active {
-            transform: scale(0.95);
-            background: #444;
+            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 71, 87, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
         }
 
         .transcript-box {
-            background: var(--card-bg);
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            min-height: 55px;
-            border: 2px solid #333;
+            background: var(--card-bg); padding: 10px; border-radius: 8px;
+            margin-bottom: 20px; min-height: 50px; border: 1px solid #333;
+            text-align: center;
         }
+        .transcript-text { color: var(--highlight); font-size: 1.1rem; }
+        .transcript-text.cmd { color: var(--correction); font-weight: bold; }
 
-        .transcript-label {
-            color: #888;
-            font-size: 0.75rem;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .transcript-text {
-            color: var(--highlight);
-            font-size: 1rem;
-            word-wrap: break-word;
-            line-height: 1.3;
-        }
-
-        .transcript-text.command {
-            color: var(--correction);
-            font-weight: bold;
-        }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
+        .grid-container { display: flex; flex-direction: column; gap: 12px; }
 
         .input-group {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 10px;
-            border-left: 5px solid #333; 
-            transition: all 0.2s ease; 
-            position: relative;
-            min-height: 75px;
+            background: var(--card-bg); padding: 12px 15px;
+            border-radius: 10px; border-left: 5px solid #333; 
+            transition: all 0.2s; position: relative;
         }
-
         .input-group.active {
             border-left-color: var(--highlight);
-            background-color: #2a2a2a;
-            transform: translateX(8px);
+            background-color: #262626; transform: translateX(5px);
         }
-
-        .input-group.locked {
-            border-left-color: var(--success);
-            opacity: 0.7;
-        }
-
-        .input-group.correction {
-            border-left-color: var(--correction);
-            background-color: #2a2a2a;
-            transform: translateX(8px);
-        }
+        /* Lock visual prevents confusion during cooldown */
+        .input-group.locked { opacity: 0.5; pointer-events: none; }
 
         .field-number {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: #333;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: bold;
+            position: absolute; top: 10px; right: 10px;
+            background: #333; color: #888; width: 24px; height: 24px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem;
         }
+        .input-group.active .field-number { background: var(--highlight); color: #121212; }
 
-        .input-group.active .field-number {
-            background: var(--highlight);
-            color: #121212;
-        }
-
-        label { 
-            display: block; 
-            color: #888; 
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-        
+        label { display: block; color: #888; font-size: 0.75rem; margin-bottom: 5px; text-transform: uppercase; }
         input {
-            width: 100%; 
-            background: transparent; 
-            border: none;
-            color: white; 
-            font-size: 1.25rem; 
-            font-weight: 600; 
-            outline: none;
-            padding: 5px 0;
-            touch-action: manipulation;
+            width: 100%; background: transparent; border: none;
+            color: white; font-size: 1.3rem; font-weight: 600; outline: none;
         }
 
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-
+        .button-group { display: flex; gap: 10px; margin-top: 20px; }
         .action-btn {
-            flex: 1;
-            min-width: 140px;
-            padding: 18px;
-            border: none;
-            font-size: 1.05rem;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            touch-action: manipulation;
+            flex: 1; padding: 15px; border: none; border-radius: 8px;
+            font-weight: bold; font-size: 1rem; cursor: pointer;
         }
+        .save-btn { background: var(--success); color: #121212; }
+        .clear-btn { background: #ff4757; color: white; }
 
-        .action-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        /* LOGS */
+        .log-section { background: var(--card-bg); border-radius: 10px; margin-top: 20px; }
+        .log-header { padding: 15px; background: #2a2a2a; display: flex; justify-content: space-between; cursor: pointer; }
+        .log-content { max-height: 0; overflow-y: auto; transition: 0.3s; }
+        .log-content.open { max-height: 300px; }
+        .log-item { padding: 10px; border-bottom: 1px solid #333; font-size: 0.9rem; }
+        .log-pending { border-left: 3px solid var(--warning); }
+        .log-synced { border-left: 3px solid var(--success); }
 
-        .save-btn {
-            background-color: var(--success);
-            color: #121212;
-        }
-
-        .clear-btn {
-            background-color: #ff4757;
-            color: white;
-        }
-
-        .action-btn:active:not(:disabled) {
-            transform: scale(0.97);
-        }
-
-        /* SAVED ITEMS LOG */
-        .log-section {
-            background: var(--card-bg);
-            border-radius: 10px;
-            margin-bottom: 15px;
-            overflow: hidden;
-        }
-
-        .log-header {
-            padding: 15px;
-            background: #252525;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            touch-action: manipulation;
-            user-select: none;
-        }
-
-        .log-header:active {
-            background: #2a2a2a;
-        }
-
-        .log-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--success);
-        }
-
-        .log-count {
-            background: var(--success);
-            color: #121212;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-
-        .log-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .log-content.open {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .log-items {
-            padding: 10px;
-        }
-
-        .log-item {
-            background: #1a1a1a;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            border-left: 3px solid var(--success);
-        }
-
-        .log-item-time {
-            color: #888;
-            font-size: 0.7rem;
-            margin-bottom: 5px;
-        }
-
-        .log-item-name {
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .log-item-details {
-            color: #aaa;
-            font-size: 0.85rem;
-            line-height: 1.4;
-        }
-
-        .log-empty {
-            padding: 20px;
-            text-align: center;
-            color: #666;
-            font-style: italic;
-        }
-
-        .commands-help {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-size: 0.85rem;
-            line-height: 1.6;
-        }
-
-        .commands-help h3 {
-            margin-top: 0;
-            color: var(--highlight);
-            font-size: 0.95rem;
-        }
-
-        .command {
-            color: var(--success);
-            font-weight: bold;
-        }
-
-        .warning {
-            background: #ff4757;
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        /* Mobile Optimizations */
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            h1 { font-size: 1.3rem; margin-bottom: 10px; }
-            #mic-btn { width: 70px; height: 70px; font-size: 1.8rem; }
-            .nav-btn { padding: 10px 15px; font-size: 0.9rem; }
-            .input-group { padding: 12px; }
-            input { font-size: 1.15rem; }
-            .action-btn { font-size: 1rem; padding: 16px; }
-            .commands-help { font-size: 0.8rem; }
-        }
-
-        @media screen and (max-width: 600px) {
-            input { font-size: 16px !important; }
-        }
+        /* Helper Text */
+        .cmd-list { text-align: center; color: #666; font-size: 0.8rem; margin-top: 20px; line-height: 1.6; }
+        .cmd-pill { background: #333; padding: 2px 6px; border-radius: 4px; color: var(--success); }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>🎤 Voice Inventory</h1>
-        <div id="status-text">Click microphone to start</div>
+        <h1>Inventory Voice</h1>
+        
+        <div id="offline-alert" onclick="syncOfflineData()">
+            ⚠️ <span id="pending-count">0</span> items waiting. Tap to Sync.
+        </div>
+
+        <div id="status-text">Tap mic to start</div>
 
         <div class="controls">
-            <button id="mic-btn" onclick="toggleMic()" title="Start/Stop Voice">🎤</button>
-            <div class="nav-buttons">
-                <button class="nav-btn" onclick="previousField()">⬅️ Prev</button>
-                <button class="nav-btn" onclick="nextField()">Next ➡️</button>
-            </div>
+            <button id="mic-btn" onclick="toggleMic()">🎙️</button>
         </div>
 
         <div class="transcript-box">
-            <div class="transcript-label">You said:</div>
-            <div class="transcript-text" id="transcript">—</div>
+            <div class="transcript-text" id="transcript">...</div>
         </div>
 
         <div class="grid-container">
-            <div class="input-group" id="group-0">
+            <div class="input-group" id="group-0" onclick="focusField(0)">
                 <span class="field-number">1</span>
                 <label>Product Name</label>
-                <input type="text" id="input-0" placeholder="..." onclick="selectField(0)">
+                <input type="text" id="input-0" placeholder="Say name...">
             </div>
-            <div class="input-group" id="group-1">
+            <div class="input-group" id="group-1" onclick="focusField(1)">
                 <span class="field-number">2</span>
                 <label>Category</label>
-                <input type="text" id="input-1" placeholder="..." onclick="selectField(1)">
+                <input type="text" id="input-1" placeholder="Say category...">
             </div>
-            <div class="input-group" id="group-2">
+            <div class="input-group" id="group-2" onclick="focusField(2)">
                 <span class="field-number">3</span>
                 <label>Unit</label>
-                <input type="text" id="input-2" placeholder="..." onclick="selectField(2)">
+                <input type="text" id="input-2" placeholder="pcs, box, kg...">
             </div>
-            <div class="input-group" id="group-3">
+            <div class="input-group" id="group-3" onclick="focusField(3)">
                 <span class="field-number">4</span>
                 <label>Price</label>
-                <input type="number" id="input-3" placeholder="..." onclick="selectField(3)">
+                <input type="number" id="input-3" placeholder="0.00">
             </div>
-            <div class="input-group" id="group-4">
+            <div class="input-group" id="group-4" onclick="focusField(4)">
                 <span class="field-number">5</span>
                 <label>Stock Qty</label>
-                <input type="number" id="input-4" placeholder="..." onclick="selectField(4)">
+                <input type="number" id="input-4" placeholder="0">
             </div>
         </div>
 
         <div class="button-group">
-            <button class="action-btn save-btn" onclick="saveToExcel()" id="save-btn">
-                💾 SAVE
-            </button>
-            <button class="action-btn clear-btn" onclick="clearForm()">
-                🗑️ CLEAR
-            </button>
+            <button class="action-btn save-btn" id="save-btn" onclick="saveItem()">💾 SAVE (Say "Done")</button>
+            <button class="action-btn clear-btn" onclick="clearForm()">🗑️ CLEAR</button>
         </div>
 
         <div class="log-section">
-            <div class="log-header" onclick="toggleLog()">
-                <span class="log-title">📋 Saved Items</span>
-                <span class="log-count" id="log-count">0</span>
+            <div class="log-header" onclick="document.getElementById('log-content').classList.toggle('open')">
+                <span>📋 History</span>
+                <span style="background:var(--success); color:#000; padding:2px 8px; border-radius:10px; font-size:0.8rem" id="log-count">0</span>
             </div>
             <div class="log-content" id="log-content">
-                <div class="log-items" id="log-items">
-                    <div class="log-empty">No items saved yet</div>
-                </div>
+                <div id="log-list"></div>
             </div>
         </div>
 
-        <div class="commands-help">
-            <h3>🎙️ Voice Commands:</h3>
-            • <span class="command">"NEXT"</span> - move forward<br>
-            • <span class="command">"BACK"</span> - go back<br>
-            • <span class="command">"DONE"</span> - save item<br>
-            • Just say numbers/text to fill fields<br><br>
-            <strong>💡 Tip:</strong> Say ONLY the data (like "3340"), pause, then say command
+        <div class="cmd-list">
+            Commands: <span class="cmd-pill">NEXT</span> <span class="cmd-pill">BACK</span> <span class="cmd-pill">DONE</span><br>
+            Or say "Jump to Price", "Jump to Stock"
         </div>
     </div>
 
     <script>
+        // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec"; 
+
+        // --- SETUP ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition ? new SpeechRecognition() : null;
         
-        if (!SpeechRecognition) {
-            document.body.innerHTML = '<div class="warning"><h2>⚠️ Voice Not Supported</h2><p>Please use Google Chrome.</p></div>' + document.body.innerHTML;
-            document.getElementById('mic-btn').disabled = true;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true; // Show real-time feedback
-        recognition.lang = 'en-US';
-
-        let isListening = false;
-        let activeIndex = 0; 
-        const totalFields = 5;
-        let isSaving = false;
-        let savedItems = [];
-
-        const statusText = document.getElementById('status-text');
+        // DOM Elements
         const micBtn = document.getElementById('mic-btn');
+        const statusText = document.getElementById('status-text');
         const transcriptEl = document.getElementById('transcript');
-        const saveBtn = document.getElementById('save-btn');
-        const logCount = document.getElementById('log-count');
-        const logContent = document.getElementById('log-content');
-        const logItems = document.getElementById('log-items');
+        const offlineAlert = document.getElementById('offline-alert');
 
-        // Command detection
-        const COMMANDS = {
-            next: ['next', 'nex', 'neck', 'nets'],
-            back: ['back', 'bac', 'bag', 'previous'],
-            done: ['done', 'don', 'save', 'finish'],
-            goto: ['go to', 'goto', 'change', 'jump to']
+        // State
+        let isListening = false;
+        let activeIndex = 0;
+        let isSaving = false;
+        let commandLock = false; // The anti-jump lock
+        const totalFields = 5;
+
+        // --- COMMANDS ---
+        const CMDS = {
+            next: ['next', 'go', 'skip', 'forward', 'move'],
+            back: ['back', 'return', 'previous', 'rear'],
+            save: ['done', 'save', 'finish', 'submit'],
+            clear: ['clear form', 'reset form', 'delete all'],
+            jump: {
+                0: ['name', 'product'], 1: ['category', 'type'], 
+                2: ['unit', 'measure'], 3: ['price', 'cost'], 4: ['stock', 'qty', 'quantity']
+            }
         };
 
-        function toggleMic() {
-            if (isListening) {
-                stopListening();
-            } else {
-                startListening();
-            }
-        }
+        if (recognition) {
+            recognition.continuous = true;
+            recognition.interimResults = true; // Still true for visual feedback, handled strictly in logic
+            recognition.lang = 'en-US';
 
-        function startListening() {
-            if (isSaving || isListening) return;
-
-            try {
-                recognition.start();
+            recognition.onstart = () => {
                 isListening = true;
                 micBtn.classList.add('active');
-                updateStatus();
-                highlightField(activeIndex);
-            } catch (e) {
-                if (e.message && e.message.includes('already started')) {
-                    isListening = true;
-                    micBtn.classList.add('active');
+                statusText.textContent = "🎤 Listening...";
+            };
+
+            recognition.onend = () => {
+                if (isListening) recognition.start(); // Auto-restart
+                else {
+                    micBtn.classList.remove('active');
+                    statusText.textContent = "⏸️ Paused";
                 }
-            }
-        }
+            };
 
-        function stopListening() {
-            try { recognition.stop(); } catch(e) {}
-            isListening = false;
-            micBtn.classList.remove('active');
-            statusText.textContent = "⏸️ Paused";
-        }
+            recognition.onresult = (event) => {
+                // If saving or locked, ignore everything
+                if (isSaving || commandLock) return;
 
-        function updateStatus() {
-            statusText.textContent = `🎤 ${getFieldName(activeIndex)}`;
-        }
+                const result = event.results[event.results.length - 1];
+                const text = result[0].transcript.toLowerCase().trim();
+                const isFinal = result.isFinal;
 
-        // MAIN VOICE HANDLER - INSTANT PROCESSING
-        recognition.onresult = (event) => {
-            if (isSaving) return;
+                // 1. Show what we hear (Visual only)
+                transcriptEl.textContent = text;
+                transcriptEl.classList.remove('cmd');
 
-            const result = event.results[event.results.length - 1];
-            const text = result[0].transcript;
-            const textLower = text.toLowerCase().trim();
-            const isFinal = result.isFinal;
-
-            // Show what's heard INSTANTLY
-            transcriptEl.textContent = text;
-
-            // Check for COMMANDS FIRST - even on interim results for faster response
-            const isCommand = checkAndExecuteCommand(textLower, isFinal);
-            
-            if (isCommand) {
-                transcriptEl.classList.add('command');
-                return; // Don't type commands into fields!
-            }
-
-            transcriptEl.classList.remove('command');
-
-            // Only update input on FINAL results
-            if (isFinal) {
-                // Remove any command words that slipped through
-                let cleanText = removeCommandWords(text);
-                if (cleanText.trim().length > 0) {
-                    updateCurrentInput(cleanText);
-                }
-            }
-        };
-
-        function checkAndExecuteCommand(textLower, isFinal) {
-            // NEXT
-            if (COMMANDS.next.some(cmd => textLower === cmd || textLower.endsWith(cmd))) {
-                if (isFinal) nextField();
-                return true;
-            }
-
-            // BACK
-            if (COMMANDS.back.some(cmd => textLower === cmd || textLower.startsWith(cmd))) {
-                if (isFinal) previousField();
-                return true;
-            }
-
-            // DONE
-            if (COMMANDS.done.some(cmd => textLower === cmd || textLower.startsWith(cmd))) {
-                if (isFinal) saveToExcel();
-                return true;
-            }
-
-            // GOTO
-            if (COMMANDS.goto.some(cmd => textLower.startsWith(cmd))) {
+                // 2. STRICT RULE: Commands only execute on FINAL results
+                // This prevents the "Interim 'Next'" -> "Final 'Next'" double jump
                 if (isFinal) {
-                    let targetIndex = -1;
-                    if (textLower.includes("name")) targetIndex = 0;
-                    else if (textLower.includes("category")) targetIndex = 1;
-                    else if (textLower.includes("unit")) targetIndex = 2;
-                    else if (textLower.includes("price")) targetIndex = 3;
-                    else if (textLower.includes("stock")) targetIndex = 4;
-
-                    if (targetIndex !== -1) jumpToField(targetIndex);
+                    if (checkCommands(text)) {
+                        transcriptEl.classList.add('cmd');
+                        // Clear transcript after a command
+                        setTimeout(() => transcriptEl.textContent = "...", 800);
+                    } else {
+                        // Not a command, so it's data input
+                        handleInput(text);
+                    }
                 }
+            };
+        } else {
+            alert("Use Chrome browser for voice features.");
+        }
+
+        // --- LOGIC ---
+
+        function toggleMic() {
+            if (isListening) { isListening = false; recognition.stop(); }
+            else { recognition.start(); }
+        }
+
+        function checkCommands(text) {
+            // Check NEXT
+            if (CMDS.next.some(c => text === c || text.endsWith(" " + c))) {
+                moveField(1);
                 return true;
             }
-
+            // Check BACK
+            if (CMDS.back.some(c => text === c)) {
+                moveField(-1);
+                return true;
+            }
+            // Check SAVE
+            if (CMDS.save.some(c => text === c)) {
+                saveItem();
+                return true;
+            }
+            // Check JUMPS
+            for (let [idx, triggers] of Object.entries(CMDS.jump)) {
+                if (triggers.some(t => text.includes(t) && (text.includes('jump') || text.includes('go')))) {
+                    focusField(parseInt(idx));
+                    return true;
+                }
+            }
+            // Check CLEAR
+            if (CMDS.clear.some(c => text.includes(c))) {
+                clearForm();
+                return true;
+            }
             return false;
         }
 
-        function removeCommandWords(text) {
-            let cleaned = text;
-            const allCommands = [...COMMANDS.next, ...COMMANDS.back, ...COMMANDS.done];
-            
-            allCommands.forEach(cmd => {
-                const regex = new RegExp('\\b' + cmd + '\\b', 'gi');
-                cleaned = cleaned.replace(regex, '');
-            });
-            
-            // Remove "go to" phrases
-            cleaned = cleaned.replace(/go to \w+/gi, '');
-            cleaned = cleaned.replace(/jump to \w+/gi, '');
-            
-            return cleaned.trim();
+        function moveField(direction) {
+            // Apply Lock
+            activateLock();
+            activeIndex = (activeIndex + direction + totalFields) % totalFields;
+            focusField(activeIndex);
         }
 
-        function textToNumber(text) {
-            const numberWords = {
-                'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
-                'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
-                'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
-                'fourteen': '14', 'fifteen': '15', 'twenty': '20', 'thirty': '30',
-                'forty': '40', 'fifty': '50', 'sixty': '60', 'hundred': '100'
-            };
-
-            let result = text.toLowerCase();
-            
-            // Handle phrases like "thirty three forty" -> "3340"
-            for (let [word, num] of Object.entries(numberWords)) {
-                result = result.replace(new RegExp('\\b' + word + '\\b', 'g'), num);
-            }
-            
-            // Remove spaces between digits: "33 40" -> "3340"
-            result = result.replace(/(\d)\s+(\d)/g, '$1$2');
-            
-            // Extract numbers
-            result = result.replace(/[^0-9.]/g, '');
-            
-            return result || text;
+        function focusField(index) {
+            activeIndex = index;
+            // UI Update
+            document.querySelectorAll('.input-group').forEach(el => el.classList.remove('active'));
+            const group = document.getElementById(`group-${index}`);
+            group.classList.add('active');
+            group.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        function updateCurrentInput(text) {
+        function activateLock() {
+            // Locks the voice engine for 1 second so it can't jump again immediately
+            commandLock = true;
+            statusText.textContent = "🔒 Moving...";
+            setTimeout(() => {
+                commandLock = false;
+                statusText.textContent = "🎤 Listening...";
+            }, 1000); // 1 Second cooldown
+        }
+
+        // --- INPUT HANDLING (Better Numbers) ---
+        function handleInput(text) {
             const input = document.getElementById(`input-${activeIndex}`);
-            if (!text || text.length < 1) return;
+            let clean = text;
 
-            let cleanText = text.trim();
+            // Remove command words if they accidentally slipped in
+            CMDS.next.forEach(c => clean = clean.replace(c, ''));
 
             if (input.type === 'number') {
-                const converted = textToNumber(cleanText);
-                input.value = converted;
-                console.log(`Number input: "${cleanText}" → "${converted}"`);
-            } else if (activeIndex === 0 || activeIndex === 2) {
-                input.value = cleanText.toUpperCase();
+                input.value = parseNumber(clean);
             } else {
-                input.value = cleanText;
-            }
-
-            // Flash green
-            input.style.color = 'var(--success)';
-            setTimeout(() => { input.style.color = 'white'; }, 400);
-        }
-
-        function nextField() {
-            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
-            document.getElementById(`group-${activeIndex}`).classList.add('locked');
-            activeIndex = (activeIndex + 1) % totalFields;
-            highlightField(activeIndex);
-            updateStatus();
-            transcriptEl.textContent = '→ NEXT';
-            setTimeout(() => { transcriptEl.textContent = '—'; }, 1000);
-        }
-
-        function previousField() {
-            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
-            activeIndex = (activeIndex - 1 + totalFields) % totalFields;
-            highlightField(activeIndex);
-            updateStatus();
-            transcriptEl.textContent = '← BACK';
-            setTimeout(() => { transcriptEl.textContent = '—'; }, 1000);
-        }
-
-        function jumpToField(targetIndex) {
-            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
-            activeIndex = targetIndex;
-            highlightField(activeIndex, true);
-            updateStatus();
-        }
-
-        function selectField(index) {
-            document.getElementById(`group-${activeIndex}`).classList.remove('active', 'correction');
-            activeIndex = index;
-            highlightField(index);
-            updateStatus();
-        }
-
-        function highlightField(index, isCorrection = false) {
-            for (let i = 0; i < totalFields; i++) {
-                document.getElementById(`group-${i}`).classList.remove('active', 'correction');
+                // Capitalize
+                input.value = clean.charAt(0).toUpperCase() + clean.slice(1);
             }
             
-            const newGroup = document.getElementById(`group-${index}`);
-            newGroup.classList.remove('locked');
-            newGroup.classList.add(isCorrection ? 'correction' : 'active');
-            newGroup.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Visual Flash
+            input.style.color = 'var(--success)';
+            setTimeout(() => input.style.color = 'white', 500);
         }
 
-        function getFieldName(index) {
-            const names = ['Product Name', 'Category', 'Unit', 'Price', 'Stock Qty'];
-            return names[index];
+        function parseNumber(text) {
+            let str = text.toLowerCase();
+            // 1. Homophone fixes
+            const map = { 'to': '2', 'too': '2', 'for': '4', 'tree': '3', 'won': '1', 'one': '1' };
+            Object.keys(map).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), map[k]));
+
+            // 2. Hyphens
+            str = str.replace(/-/g, ' ');
+
+            // 3. Simple text-to-digit replacement for common inventory numbers
+            const nums = {
+                'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'sixty': '60',
+                'ten': '10', 'eleven': '11', 'twelve': '12'
+            };
+            // Very basic parser: if user says "twenty five", we get "20 5" -> remove space -> "25"
+            Object.keys(nums).forEach(k => str = str.replace(new RegExp(`\\b${k}\\b`, 'g'), nums[k]));
+
+            // Remove non-digits/dots and spaces
+            return str.replace(/[^0-9.]/g, ' ').replace(/\s/g, '');
         }
 
-        function saveToExcel() {
+        // --- SAVE & OFFLINE ---
+        function saveItem() {
             if (isSaving) return;
 
             const data = {
@@ -735,124 +388,99 @@
                 unit: document.getElementById('input-2').value,
                 price: document.getElementById('input-3').value,
                 stock: document.getElementById('input-4').value,
-                timestamp: new Date().toLocaleString()
+                timestamp: new Date().toLocaleTimeString()
             };
 
-            if (!data.name || data.name.trim().length < 1) {
-                alert("❌ Product name required!");
-                return;
-            }
+            if (!data.name) { alert("Name required!"); return; }
 
             isSaving = true;
-            saveBtn.disabled = true;
-            saveBtn.textContent = "⏳ SAVING...";
-            saveBtn.style.backgroundColor = "#ffa502";
-            statusText.textContent = "📤 Saving...";
-            transcriptEl.textContent = "💾 Saving to sheet...";
-
-            const scriptURL = "https://script.google.com/macros/s/AKfycbz0n_uNiYoFQ99JMynsQ9yWJPQDL9QIh2dI3fPzogQ7HLHeZkDuM163kpS79pgpAzB9/exec";
-
-            fetch(scriptURL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(() => {
-                finishSave(data);
-            })
-            .catch(error => {
-                console.error('Save error:', error);
-                alert("⚠️ Save failed!");
-                isSaving = false;
-                saveBtn.disabled = false;
-                saveBtn.textContent = "💾 SAVE";
-                saveBtn.style.backgroundColor = "";
-            });
-
-            setTimeout(() => {
-                if (isSaving) finishSave(data);
-            }, 2500);
+            document.getElementById('save-btn').textContent = "⏳...";
+            
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                .then(() => finishSave(data, true))
+                .catch(() => saveOffline(data)); // Fallback
+            } else {
+                saveOffline(data);
+            }
         }
 
-        function finishSave(data) {
-            if (!isSaving) return;
+        function saveOffline(data) {
+            let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
+            pending.push(data);
+            localStorage.setItem('inv_offline', JSON.stringify(pending));
+            finishSave(data, false);
+        }
+
+        function finishSave(data, synced) {
+            // Add to log
+            const list = document.getElementById('log-list');
+            const div = document.createElement('div');
+            div.className = `log-item ${synced ? 'log-synced' : 'log-pending'}`;
+            div.innerHTML = `<b>${data.name}</b> <span style="color:#888">Qty:${data.stock}</span>`;
+            list.insertBefore(div, list.firstChild);
             
-            savedItems.unshift(data);
-            updateLog();
+            document.getElementById('log-count').textContent = list.children.length;
             
-            transcriptEl.textContent = `✅ SAVED: ${data.name}`;
-            
+            // Check offline status
+            updateOfflineUI();
+
+            // Reset Form
             clearForm();
+            isSaving = false;
+            document.getElementById('save-btn').textContent = "💾 SAVE (Say 'Done')";
+            transcriptEl.textContent = "✅ Saved";
             
-            saveBtn.textContent = "💾 SAVE";
-            saveBtn.style.backgroundColor = "";
-            saveBtn.disabled = false;
+            // Move back to start
+            focusField(0);
+        }
+
+        function updateOfflineUI() {
+            let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
+            if (pending.length > 0) {
+                offlineAlert.style.display = 'block';
+                document.getElementById('pending-count').textContent = pending.length;
+            } else {
+                offlineAlert.style.display = 'none';
+            }
+        }
+
+        function syncOfflineData() {
+            if (!navigator.onLine) return alert("Still offline!");
             
-            activeIndex = 0;
-            highlightField(0);
-            
-            setTimeout(() => {
-                isSaving = false;
-                transcriptEl.textContent = "—";
-                updateStatus();
-            }, 2000);
+            let pending = JSON.parse(localStorage.getItem('inv_offline') || "[]");
+            if (confirm(`Sync ${pending.length} items?`)) {
+                // Upload one by one loop
+                const uploadNext = (i) => {
+                    if (i >= pending.length) {
+                        localStorage.setItem('inv_offline', "[]");
+                        updateOfflineUI();
+                        location.reload(); // Refresh to clean slate
+                        return;
+                    }
+                    fetch(SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pending[i])
+                    }).then(() => uploadNext(i+1));
+                };
+                uploadNext(0);
+            }
         }
 
         function clearForm() {
-            for (let i = 0; i < totalFields; i++) {
-                document.getElementById(`input-${i}`).value = '';
-                document.getElementById(`group-${i}`).classList.remove('locked', 'active', 'correction');
-            }
+            for(let i=0; i<5; i++) document.getElementById(`input-${i}`).value = '';
+            focusField(0);
         }
 
-        function toggleLog() {
-            logContent.classList.toggle('open');
-        }
+        // Init
+        focusField(0);
+        updateOfflineUI();
 
-        function updateLog() {
-            logCount.textContent = savedItems.length;
-            
-            if (savedItems.length === 0) {
-                logItems.innerHTML = '<div class="log-empty">No items saved yet</div>';
-                return;
-            }
-
-            logItems.innerHTML = savedItems.map(item => `
-                <div class="log-item">
-                    <div class="log-item-time">${item.timestamp}</div>
-                    <div class="log-item-name">${item.name}</div>
-                    <div class="log-item-details">
-                        ${item.category} • ${item.unit} • ₱${item.price} • Qty: ${item.stock}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        recognition.onend = () => {
-            if (isListening && !isSaving) {
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        isListening = false;
-                        micBtn.classList.remove('active');
-                    }
-                }, 100);
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error("Error:", event.error);
-            if (event.error === 'not-allowed') {
-                isListening = false;
-                micBtn.classList.remove('active');
-                statusText.textContent = "🚫 Mic blocked";
-                alert("⚠️ Allow microphone access");
-            }
-        };
-
-        highlightField(0);
     </script>
 </body>
 </html>
