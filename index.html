@@ -788,6 +788,16 @@
                 isSaving = false;
                 transcriptEl.textContent = "—";
                 updateStatus();
+                
+                // RESTART MICROPHONE AFTER SAVE
+                if (isListening) {
+                    try {
+                        recognition.start();
+                        micBtn.classList.add('active');
+                    } catch (e) {
+                        console.log('Recognition restart handled by onend');
+                    }
+                }
             }, 2000);
         }
 
@@ -848,3 +858,4 @@
     </script>
 </body>
 </html>
+
