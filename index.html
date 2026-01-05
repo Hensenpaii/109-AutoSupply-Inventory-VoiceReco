@@ -366,7 +366,7 @@
             alert("⚠️ Voice recognition not supported. Use Chrome.");
         }
 
-        const recognition = new SpeechRecognition();
+        let recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
@@ -391,13 +391,105 @@
         const logItems = document.getElementById('log-items');
         const logCount = document.getElementById('log-count');
 
-        // LOAD SAVED ITEMS
-        function loadItems() {
-            const saved = localStorage.getItem('inventoryItems');
-            if (saved) {
-                savedItems = JSON.parse(saved);
-                updateLog();
+        // ========== INITIALIZATION ==========
+        function initializeApp() {
+            loadItems();
+            highlightField(0);
+            setupRecognition();
+        }
+
+        function setupRecognition() {
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            
+            // Clear old event listeners
+            recognition.onresult = null;
+            recognition.onend = null;
+            recognition.onerror = null;
+            
+            // Set new event listeners
+            recognition.onresult = handleVoiceResult;
+            recognition.onend = handleRecognitionEnd;
+            recognition.onerror = handleRecognitionError;
+        }
+
+        // ========== VOICE HANDLING ==========
+        function handleVoiceResult(event) {
+            if (saving) return;
+
+            const result = event.results[event.results.length - 1];
+            const text = result[0].transcript.trim();
+            const lower = text.toLowerCase();
+            const isFinal = result.isFinal;
+            
+            // Always show what's being heard
+            transcript.textContent = text;
+            
+            if (isFinal) {
+                const now = Date.now();
+                const timeSinceLastCommand = now - lastCommandTime;
+                
+                // Ignore fragments that come too quickly after commands
+                if (timeSinceLastCommand < 500) {
+                    console.log('Ignoring post-command fragment');
+                    return;
+                }
+                
+                // Check for commands FIRST
+                const words = lower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                
+                // NEXT command
+                if ((lastWord === 'next' || lastWord === 'nex' || lastWord === 'text') && 
+                    (words.length <= 2 || lower.includes('go next') || lower.includes('move next'))) {
+                    lastCommand = text;
+                    lastCommandTime = now;
+                    nextField();
+                    clearTranscriptAfterDelay(text);
+                    return;
+                }
+                
+                // BACK command
+                if (lastWord === 'back' || lastWord === 'previous' || 
+                    lower.includes('go back') || lower.includes('move back')) {
+                    lastCommand = text;
+                    lastCommandTime = now;
+                    prevField();
+                    clearTranscriptAfterDelay(text);
+                    return;
+                }
+                
+                // CLEAR command
+                if (lower.includes('clear') && (lower.includes('all') || words.length === 1)) {
+                    lastCommand = text;
+                    lastCommandTime = now;
+                    clearAll();
+                    clearTranscriptAfterDelay(text);
+                    return;
+                }
+                
+                // SAVE command
+                if (lastWord === 'save' || lastWord === 'done' || 
+                    lower.includes('save it') || lower.includes('all done')) {
+                    lastCommand = text;
+                    lastCommandTime = now;
+                    saveData();
+                    clearTranscriptAfterDelay(text);
+                    return;
+                }
+                
+                // If we get here, fill the current field
+                fillField(text);
             }
+        }
+
+        function clearTranscriptAfterDelay(text) {
+            setTimeout(() => {
+                if (transcript.textContent === text) {
+                    transcript.textContent = '...';
+                }
+            }, 300);
         }
 
         function handleRecognitionEnd() {
@@ -416,222 +508,53 @@
             }
         }
 
-        // MIC CONTROL
-        function toggleMic() {
-            if (listening) {
-                stopMic();
-            } else {
-                micRestartAttempts = 0; // Reset counter when user manually starts
-                startMic();
-            }
-        }
-
-        function startMic() {
-            try {
-                recognition.start();
-                listening = true;
-                micBtn.classList.add('listening');
-                updateStatus();
-            } catch (e) {
-                console.log('Mic already running');
-            }
-        }
-
-        function stopMic() {
-            try {
-                recognition.stop();
-            } catch (e) {}
-            listening = false;
-            micBtn.classList.remove('listening');
-            status.textContent = 'Paused';
-        }
-
-        function updateStatus() {
-            const fields = ['Product Name', 'Category', 'Unit', 'Price', 'Stock'];
-            status.textContent = `🎤 ${fields[currentField]}`;
-        }
-
-        // VOICE RECOGNITION
-        handleVoiceResult = (event) => {
-            if (saving) return;
-
-            const result = event.results[event.results.length - 1];
-            const text = result[0].transcript.trim();
-            const lower = text.toLowerCase();
-            const isFinal = result.isFinal;
-            
-            // Always show what's being heard (for user feedback)
-            transcript.textContent = text;
-            
-            if (isFinal) {
-                const now = Date.now();
-                const timeSinceLastCommand = now - lastCommandTime;
-                
-                // CRITICAL FIX 1: Ignore results that come too quickly after a command
-                // This prevents the "echo" effect where the same command gets processed twice
-                if (timeSinceLastCommand < 500) {
-                    console.log('Ignoring post-command speech fragment');
-                    return;
-                }
-                
-                // CRITICAL FIX 2: Better command detection with word boundaries
-                const words = lower.split(/\s+/);
-                const lastWord = words[words.length - 1];
-                
-                // Check if the last word is a command (allows "okay next" or "move next")
-                if (lastWord === 'next' || lastWord === 'nex' || lastWord === 'text') {
-                    // Also check if this is mostly a command (not a phrase that happens to end with "next")
-                    if (words.length <= 2 || text.toLowerCase().includes('go next') || text.toLowerCase().includes('move next')) {
-                        lastCommand = text;
-                        lastCommandTime = now;
-                        nextField();
-                        
-                        // CRITICAL FIX 3: Clear the transcript after a command
-                        setTimeout(() => {
-                            if (transcript.textContent === text) {
-                                transcript.textContent = '...';
-                            }
-                        }, 300);
-                        
-                        return;
-                    }
-                }
-                
-                // CRITICAL FIX 4: More robust back command detection
-                if (lastWord === 'back' || lastWord === 'previous' || 
-                    text.toLowerCase().includes('go back') || 
-                    text.toLowerCase().includes('move back')) {
-                    lastCommand = text;
-                    lastCommandTime = now;
-                    prevField();
+        function handleRecognitionError(event) {
+            console.log('Recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                alert('⚠️ Please allow microphone access');
+                listening = false;
+                micBtn.classList.remove('listening');
+                status.textContent = 'Mic access denied';
+            } else if (event.error === 'no-speech') {
+                // This is normal - just restart
+                if (listening && !saving) {
                     setTimeout(() => {
-                        if (transcript.textContent === text) {
-                            transcript.textContent = '...';
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Error restarting after no-speech:', e);
                         }
-                    }, 300);
-                    return;
-                }
-                
-                // CRITICAL FIX 5: Clear detection
-                if (lower.includes('clear') && (lower.includes('all') || words.length === 1)) {
-                    lastCommand = text;
-                    lastCommandTime = now;
-                    clearAll();
-                    setTimeout(() => {
-                        if (transcript.textContent === text) {
-                            transcript.textContent = '...';
-                        }
-                    }, 300);
-                    return;
-                }
-                
-                // CRITICAL FIX 6: Save detection
-                if (lastWord === 'save' || lastWord === 'done' || 
-                    text.toLowerCase().includes('save it') || 
-                    text.toLowerCase().includes('all done')) {
-                    lastCommand = text;
-                    lastCommandTime = now;
-                    saveData();
-                    setTimeout(() => {
-                        if (transcript.textContent === text) {
-                            transcript.textContent = '...';
-                        }
-                    }, 300);
-                    return;
-                }
-                
-                // If we get here, it's not a command - fill the current field
-                // BUT FIRST: Check if this looks like it might have been a failed command
-                if (text.length < 10 && !/\d/.test(text)) {
-                    // Short text without numbers might be a misheard command
-                    const possibleCommands = ['next', 'back', 'clear', 'save', 'done'];
-                    const similarity = possibleCommands.some(cmd => 
-                        levenshteinDistance(lower, cmd) <= 2
-                    );
-                    
-                    if (similarity) {
-                        console.log('Ignoring possible misheard command:', text);
-                        transcript.textContent = '...';
-                        return;
-                    }
-                }
-                
-                // Actually fill the field
-                fillField(text);
-            }
-        };
-
-        function levenshteinDistance(a, b) {
-            const matrix = [];
-            
-            for (let i = 0; i <= b.length; i++) {
-                matrix[i] = [i];
-            }
-            
-            for (let j = 0; j <= a.length; j++) {
-                matrix[0][j] = j;
-            }
-            
-            for (let i = 1; i <= b.length; i++) {
-                for (let j = 1; j <= a.length; j++) {
-                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                        matrix[i][j] = matrix[i - 1][j - 1];
-                    } else {
-                        matrix[i][j] = Math.min(
-                            matrix[i - 1][j - 1] + 1,
-                            matrix[i][j - 1] + 1,
-                            matrix[i - 1][j] + 1
-                        );
-                    }
+                    }, 100);
                 }
             }
-            
-            return matrix[b.length][a.length];
         }
 
-        // FILL FIELD
+        // ========== NUMBER PARSING (FIXED) ==========
         function fillField(text) {
             const input = document.getElementById(`input-${currentField}`);
             let value = text.trim();
             
-            // Don't fill if it's empty or just punctuation
+            // Don't fill if empty
             if (!value || value === '...' || /^[.,!?]+$/.test(value)) {
                 return;
             }
             
-            // Check for commands that might be misinterpreted as data
-            const lower = value.toLowerCase();
-            const commands = ['next', 'back', 'clear', 'save', 'done', 'previous'];
-            
-            // If it's a single word and matches a command (with some flexibility)
-            if (commands.some(cmd => {
-                return lower === cmd || 
-                    lower.startsWith(cmd) || 
-                    levenshteinDistance(lower, cmd) <= 1;
-            })) {
-                console.log('Blocked command from filling field:', value);
-                return;
-            }
-            
-            // SPECIAL: For price/stock fields, always try to parse as number
+            // For price/stock fields: parse numbers intelligently
             if (currentField === 3 || currentField === 4) {
-                // Try multiple parsing strategies
                 const parsed = parseNumber(value);
+                console.log(`Parsed "${value}" → "${parsed}"`);
                 
-                // If parsing gave us something different, use it
-                if (parsed !== value && parsed !== '') {
+                if (parsed !== '' && parsed !== value) {
                     input.value = parsed;
-                    console.log(`Field ${currentField} parsed "${value}" → "${parsed}"`);
-                    return;
+                } else {
+                    // Extract any digits as fallback
+                    const digits = value.replace(/[^0-9.]/g, '');
+                    input.value = digits || value;
                 }
-                
-                // Otherwise, use the original but clean it
-                value = value.replace(/[^0-9.]/g, '');
-                input.value = value;
                 return;
             }
             
-            // For text fields: uppercase first letter of each word
+            // For text fields: title case
             if (currentField === 0 || currentField === 2) {
                 value = value.split(' ')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -639,97 +562,56 @@
             }
             
             input.value = value;
-            console.log(`Field ${currentField} set to: ${value}`);
         }
 
-        // PARSE NUMBERS
         function parseNumber(text) {
-            // Comprehensive number mapping
-            const numberWords = {
-                'zero': 0, 'oh': 0, 'o': 0,
-                'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-                'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
-                'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13,
-                'fourteen': 14, 'fifteen': 15, 'sixteen': 16,
-                'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
-                'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
-                'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
-                'hundred': 100, 'thousand': 1000, 'grand': 1000
+            // SIMPLIFIED AND ROBUST NUMBER PARSER
+            const numberMap = {
+                'zero': '0', 'oh': '0', 'o': '0',
+                'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+                'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+                'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
+                'fourteen': '14', 'fifteen': '15', 'sixteen': '16',
+                'seventeen': '17', 'eighteen': '18', 'nineteen': '19',
+                'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50',
+                'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90'
             };
 
             let input = text.toLowerCase().trim();
             
-            // Remove common non-number words that might appear
-            input = input.replace(/and\s+/g, ' ')
-                        .replace(/a\s+/g, ' ')
-                        .replace(/the\s+/g, ' ')
-                        .replace(/only\s+/g, ' ')
-                        .replace(/just\s+/g, ' ')
-                        .replace(/items?\s*/g, '')
-                        .replace(/pcs?\s*/g, '')
-                        .replace(/pieces?\s*/g, '')
+            // Remove common filler words
+            input = input.replace(/\b(and|a|the|only|just|items?|pcs?|pieces?)\b/g, '')
+                        .replace(/\s+/g, ' ')
                         .trim();
 
-            console.log(`Parsing: "${text}" → "${input}"`);
-
-            // Direct numeric extraction first
+            // Direct number match
             const directNumber = input.match(/\d+/);
-            if (directNumber) {
-                return directNumber[0];
-            }
+            if (directNumber) return directNumber[0];
 
-            // Handle "point five" for decimal
+            // Handle "point" for decimals
             if (input.includes('point')) {
                 const parts = input.split('point');
-                const whole = numberWords[parts[0].trim()] || 0;
-                const decimalPart = parts[1].trim().split('').map(char => {
-                    const num = numberWords[char];
-                    return num !== undefined ? num : '';
-                }).join('');
-                return decimalPart ? `${whole}.${decimalPart}` : whole.toString();
+                const whole = numberMap[parts[0].trim()] || '0';
+                const decimal = parts[1].trim().split('').map(char => 
+                    numberMap[char] || ''
+                ).join('');
+                return `${whole}.${decimal}`;
             }
 
-            // Split into words
-            const words = input.split(/\s+|-/);
-            let total = 0;
-            let current = 0;
+            // Simple word replacement
+            let result = input;
+            Object.keys(numberMap).forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'g');
+                result = result.replace(regex, numberMap[word]);
+            });
 
-            for (let word of words) {
-                const num = numberWords[word];
-                
-                if (num === undefined) {
-                    // Try to extract embedded numbers like "five0" -> "50"
-                    const embeddedNum = word.match(/\d+/);
-                    if (embeddedNum) {
-                        current = parseInt(embeddedNum[0], 10);
-                        continue;
-                    }
-                    
-                    // Skip non-number words
-                    continue;
-                }
-
-                if (num >= 100) {
-                    if (current === 0) current = 1;
-                    current *= num;
-                } else {
-                    current += num;
-                }
-            }
-
-            total += current;
-
-            // If we found a number, return it
-            if (total > 0) {
-                return total.toString();
-            }
-
-            // Fallback: Try to extract any digits
-            const fallbackDigits = text.replace(/[^0-9]/g, '');
-            return fallbackDigits || text;
+            // Remove non-digits (except decimal point)
+            result = result.replace(/[^0-9.]/g, '');
+            
+            return result || '';
         }
 
-        // NAVIGATION
+        // ========== NAVIGATION ==========
         function nextField() {
             if (currentField < 4) {
                 currentField++;
@@ -745,13 +627,10 @@
         }
 
         function highlightField(index) {
-            // Remove active from all
             for (let i = 0; i < 5; i++) {
                 document.getElementById(`field-${i}`).classList.remove('active');
             }
-            // Add active to current
             document.getElementById(`field-${index}`).classList.add('active');
-            // Scroll into view
             document.getElementById(`field-${index}`).scrollIntoView({
                 behavior: 'smooth',
                 block: 'center'
@@ -759,7 +638,89 @@
             updateStatus();
         }
 
-        // CLEAR
+        // ========== MICROPHONE CONTROL ==========
+        function toggleMic() {
+            if (listening) {
+                stopMic();
+            } else {
+                micRestartAttempts = 0;
+                startMic();
+            }
+        }
+
+        function startMic() {
+            try {
+                // Ensure fresh setup on Android
+                if (isAndroid) {
+                    setupRecognition();
+                }
+                
+                recognition.start();
+                listening = true;
+                micBtn.classList.add('listening');
+                updateStatus();
+                console.log('Mic started');
+            } catch (e) {
+                console.log('Mic start error:', e);
+            }
+        }
+
+        function stopMic() {
+            try {
+                recognition.stop();
+            } catch (e) {}
+            listening = false;
+            micBtn.classList.remove('listening');
+            status.textContent = 'Paused';
+        }
+
+        function updateStatus() {
+            const fields = ['Product Name', 'Category', 'Unit', 'Price', 'Stock'];
+            status.textContent = listening ? `🎤 ${fields[currentField]}` : 'Click mic to start';
+        }
+
+        // ========== ANDROID MIC FIX ==========
+        function restartAndroidMic() {
+            if (!listening || micRestartAttempts >= MAX_MIC_RESTARTS) {
+                console.log('Max restart attempts reached');
+                listening = false;
+                micBtn.classList.remove('listening');
+                return;
+            }
+
+            micRestartAttempts++;
+            console.log(`Android mic restart attempt ${micRestartAttempts}`);
+
+            // Force stop
+            try {
+                recognition.stop();
+            } catch (e) {}
+
+            // Fresh start
+            setTimeout(() => {
+                try {
+                    setupRecognition();
+                    recognition.start();
+                    
+                    setTimeout(() => {
+                        if (listening) {
+                            console.log('Android mic restarted successfully');
+                            status.textContent = '✅ Mic restored';
+                            setTimeout(updateStatus, 1000);
+                        }
+                    }, 500);
+                } catch (error) {
+                    console.log('Android restart failed:', error);
+                    
+                    // Retry with exponential backoff
+                    if (micRestartAttempts < MAX_MIC_RESTARTS) {
+                        setTimeout(() => restartAndroidMic(), 1000 * micRestartAttempts);
+                    }
+                }
+            }, 300);
+        }
+
+        // ========== DATA MANAGEMENT ==========
         function clearAll() {
             for (let i = 0; i < 5; i++) {
                 document.getElementById(`input-${i}`).value = '';
@@ -769,7 +730,6 @@
             transcript.textContent = '...';
         }
 
-        // SAVE
         function saveData() {
             if (saving) return;
 
@@ -794,7 +754,7 @@
             saveBtn.textContent = '⏳ Saving...';
             status.textContent = 'Saving to Google Sheets...';
 
-            // Save to local log
+            // Save locally first
             savedItems.unshift(data);
             localStorage.setItem('inventoryItems', JSON.stringify(savedItems));
             updateLog();
@@ -814,7 +774,7 @@
                 finishSave(data);
             });
 
-            // Timeout fallback
+            // Fallback timeout
             setTimeout(() => {
                 if (saving) finishSave(data);
             }, 3000);
@@ -829,97 +789,43 @@
             saveBtn.disabled = false;
             transcript.textContent = '✅ Item saved!';
 
-            // Clear fields but preserve microphone state
+            // Clear fields
             clearAll();
 
-            // ANDROID-SPECIFIC FIX: Handle mic resurrection
+            // Handle Android mic restart
             if (listening && isAndroid) {
-                console.log('Android: Restarting mic after save...');
+                console.log('Android: Restarting mic after save');
                 
-                // Step 1: Stop mic gracefully
                 setTimeout(() => {
                     try {
                         recognition.stop();
-                        recognition.onend = null; // Temporarily disable auto-restart
-                    } catch (e) {
-                        console.log('Android: Error stopping mic:', e);
-                    }
+                    } catch (e) {}
                     
-                    // Step 2: Wait for cleanup
                     setTimeout(() => {
                         micRestartAttempts = 0;
                         restartAndroidMic();
                     }, 500);
-                }, 100);
+                }, 200);
             } else if (listening) {
-                // Non-Android: Normal behavior
+                // Normal behavior for non-Android
                 setTimeout(() => {
                     if (listening) {
                         updateStatus();
                         transcript.textContent = '...';
                     }
-                }, 2000);
+                }, 1500);
             }
         }
 
-        // NEW: Dedicated Android mic restarter
-        function restartAndroidMic() {
-            if (!listening || micRestartAttempts >= MAX_MIC_RESTARTS) {
-                console.log('Android: Max restart attempts reached or not listening');
-                listening = false;
-                micBtn.classList.remove('listening');
-                return;
+        // ========== LOG FUNCTIONS ==========
+        function loadItems() {
+            const saved = localStorage.getItem('inventoryItems');
+            if (saved) {
+                savedItems = JSON.parse(saved);
+                updateLog();
             }
-
-            micRestartAttempts++;
-            console.log(`Android: Mic restart attempt ${micRestartAttempts}`);
-
-            // Force stop any existing instance
-            try {
-                recognition.stop();
-            } catch (e) {}
-
-            // Create a fresh recognition instance for Android
-            setTimeout(() => {
-                try {
-                    // Re-setup the recognition event handlers
-                    setupRecognition();
-                    
-                    // Start fresh
-                    recognition.start();
-                    
-                    // Give it time to initialize
-                    setTimeout(() => {
-                        if (recognition && listening) {
-                            console.log('Android: Mic successfully restarted');
-                            status.textContent = '✅ Mic restored';
-                            setTimeout(() => updateStatus(), 1000);
-                        }
-                    }, 300);
-                } catch (error) {
-                    console.log('Android: Failed to restart mic:', error);
-                    
-                    // Exponential backoff retry
-                    if (micRestartAttempts < MAX_MIC_RESTARTS) {
-                        setTimeout(() => restartAndroidMic(), 1000 * micRestartAttempts);
-                    }
-                }
-            }, 200);
         }
 
-        // NEW: Setup recognition separately for easy recreation
-        function setupRecognition() {
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-            
-            // Reattach event handlers
-            recognition.onresult = handleVoiceResult;
-            recognition.onend = handleRecognitionEnd;
-            recognition.onerror = handleRecognitionError;
-        }
-
-        // LOG
         function toggleLog() {
             logItems.classList.toggle('open');
         }
@@ -942,31 +848,8 @@
             `).join('');
         }
 
-        // ERROR HANDLING
-        recognition.onend = () => {
-            if (listening && !saving) {
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        listening = false;
-                        micBtn.classList.remove('listening');
-                    }
-                }, 100);
-            }
-        };
-
-        recognition.onerror = (event) => {
-            if (event.error === 'not-allowed') {
-                alert('⚠️ Please allow microphone access');
-                listening = false;
-                micBtn.classList.remove('listening');
-            }
-        };
-
-        // INITIALIZE
-        loadItems();
-        highlightField(0);
+        // ========== START THE APP ==========
+        initializeApp();
     </script>
 </body>
 </html>
