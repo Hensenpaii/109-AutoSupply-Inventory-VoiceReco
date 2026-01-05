@@ -634,25 +634,64 @@
       }
     };
 
+    function normalizeNumberSpeech(s) {
+      return (s || "")
+        .toLowerCase()
+        // common homophones that break numbers
+        .replace(/\b(to|too)\b/g, "two")
+        .replace(/\b(for|fore)\b/g, "four")
+        .replace(/\b(ate)\b/g, "eight")
+        .replace(/\b(oh|owe)\b/g, "zero")
+        .replace(/\b(won)\b/g, "one")
+    
+        // optional “accent-ish” fixes (safe)
+        .replace(/\b(tree)\b/g, "three")
+        .replace(/\b(fife)\b/g, "five")
+        .replace(/\b(sex|sicks)\b/g, "six")
+        .replace(/\b(seben)\b/g, "seven")
+        .replace(/\b(niner)\b/g, "nine");
+    }
+    
+    function confirmFeedback() {
+      // tiny vibration = instant “it worked” feeling (mobile only)
+      if (navigator.vibrate) navigator.vibrate(25);
+    }
+    
     function updateCurrentInput(text) {
       const input = document.getElementById(`input-${activeIndex}`);
       if (!text || text.length < 1) return;
-
+    
       let cleanText = text.trim();
-
+    
       if (input.type === "number") {
-        const converted = textToNumber(cleanText);
+        // Fix “2” being recognized as “to/too” etc.
+        const normalized = normalizeNumberSpeech(cleanText);
+    
+        const converted = textToNumber(normalized);
+    
+        // If conversion fails or results in empty, show feedback instead of “silence”
+        if (!converted || converted.trim().length === 0) {
+          transcriptEl.textContent = "❌ Didn't catch a number. Try again (e.g., 'two' or '2').";
+          transcriptEl.classList.add("command");
+          setTimeout(() => transcriptEl.classList.remove("command"), 900);
+          return;
+        }
+    
         input.value = converted;
       } else if (activeIndex === 0 || activeIndex === 2) {
         input.value = cleanText.toUpperCase();
       } else {
         input.value = cleanText;
       }
-
+    
+      // Visual feedback
       input.style.color = "var(--success)";
       setTimeout(() => { input.style.color = "white"; }, 400);
+    
+      // Haptic feedback (mobile)
+      confirmFeedback();
     }
-
+    
     function nextField() {
       document.getElementById(`group-${activeIndex}`).classList.remove("active");
       document.getElementById(`group-${activeIndex}`).classList.add("locked");
@@ -841,3 +880,4 @@
   </script>
 </body>
 </html>
+
